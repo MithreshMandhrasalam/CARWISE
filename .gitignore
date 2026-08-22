@@ -1,0 +1,30 @@
+# AutoTrust AI — Root .gitignore
+node_modules/
+.next/
+dist/
+build/
+*.log
+.DS_Store
+.env
+.env.local
+*.env
+uploads/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+
+# AI model weights (too large for git — use git-lfs or download separately)
+ai-service/app/ml/weights/*.pt
+ai-service/app/ml/weights/*.onnx
+ai-service/app/ml/weights/*.json
+ai-service/app/ml/weights/*.pkl
+
+# MongoDB
+*.mongo
