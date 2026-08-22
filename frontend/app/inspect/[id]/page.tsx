@@ -1,51 +1,40 @@
 'use client';
-import { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
-import Navbar from '@/components/layout/Navbar';
-import Footer from '@/components/layout/Footer';
-import ReportViewer from '@/components/inspection/ReportViewer';
-import { inspectionApi } from '@/lib/api';
-import { Inspection } from '@/lib/types';
-import { Loader, AlertCircle } from 'lucide-react';
+import { use } from 'react';
+import Link from 'next/link';
+import { ArrowLeft } from 'lucide-react';
+import { AppShell } from '@/components/layout/AppShell';
+import { ReportViewer } from '@/components/inspection/ReportViewer';
+import { DEMO_INSPECTIONS } from '@/lib/mockData';
+import { EmptyState } from '@/components/ui/EmptyState';
 
-export default function InspectionReportPage() {
-  const { id } = useParams<{ id: string }>();
-  const [inspection, setInspection] = useState<Inspection | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+export default function InspectionReportPage({ params }: { params: Promise<{ id: string }> }) {
+  const resolvedParams = use(params);
+  const report = DEMO_INSPECTIONS.find((i) => i.id === resolvedParams.id) || DEMO_INSPECTIONS[0];
 
-  useEffect(() => {
-    const fetch = async () => {
-      try {
-        const { data } = await inspectionApi.get(id);
-        setInspection(data.data);
-      } catch {
-        setError('Failed to load inspection report.');
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetch();
-  }, [id]);
+  if (!report) {
+    return (
+      <AppShell title="Report Not Found">
+        <EmptyState
+          title="Inspection Report Not Found"
+          description="The requested inspection report identifier does not exist or has expired."
+          actionLabel="Return to Dashboard"
+          onAction={() => window.location.href = '/dashboard'}
+        />
+      </AppShell>
+    );
+  }
 
   return (
-    <div style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column' }}>
-      <Navbar />
-      <div className="container" style={{ padding: 'var(--space-10) var(--space-6)', flex: 1 }}>
-        {loading && (
-          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 400 }}>
-            <Loader size={40} color="var(--color-primary-light)" className="animate-spin" />
-          </div>
-        )}
-        {error && (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, minHeight: 400, justifyContent: 'center' }}>
-            <AlertCircle size={48} color="var(--color-danger)" />
-            <p style={{ color: 'var(--color-text-secondary)' }}>{error}</p>
-          </div>
-        )}
-        {inspection && <ReportViewer inspection={inspection} />}
-      </div>
-      <Footer />
-    </div>
+    <AppShell
+      title={`Vehicle Audit: ${report.vehicleInfo.year} ${report.vehicleInfo.make} ${report.vehicleInfo.model}`}
+      subtitle={`Comprehensive condition, evidence confidence, and trust assessment report.`}
+      action={
+        <Link href="/dashboard" className="btn btn-ghost btn-sm">
+          <ArrowLeft size={14} /> Back to Dashboard
+        </Link>
+      }
+    >
+      <ReportViewer report={report} />
+    </AppShell>
   );
 }

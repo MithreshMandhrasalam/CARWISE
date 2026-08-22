@@ -1,24 +1,24 @@
 'use client';
 import { useCallback, useState } from 'react';
-import { Upload, X, Check, Image as ImageIcon, ArrowRight } from 'lucide-react';
+import { Upload, X, Check, Image as ImageIcon, ArrowRight, ShieldCheck, AlertTriangle } from 'lucide-react';
 import { ImageAngle } from '@/lib/types';
+import { Button } from '@/components/ui/Button';
+import { Badge } from '@/components/ui/Badge';
+import { Alert } from '@/components/ui/Alert';
 
-const IMAGE_SLOTS: { angle: ImageAngle; label: string; required?: boolean }[] = [
-  { angle: 'front', label: 'Front', required: true },
-  { angle: 'rear', label: 'Rear', required: true },
-  { angle: 'left', label: 'Left Side', required: true },
-  { angle: 'right', label: 'Right Side', required: true },
-  { angle: 'front-left', label: 'Front-Left' },
-  { angle: 'front-right', label: 'Front-Right' },
-  { angle: 'rear-left', label: 'Rear-Left' },
-  { angle: 'rear-right', label: 'Rear-Right' },
-  { angle: 'interior', label: 'Interior' },
-  { angle: 'dashboard', label: 'Dashboard' },
-  { angle: 'engine', label: 'Engine Bay' },
-  { angle: 'tyre-fl', label: 'Tyre FL' },
-  { angle: 'tyre-fr', label: 'Tyre FR' },
-  { angle: 'tyre-rl', label: 'Tyre RL' },
-  { angle: 'tyre-rr', label: 'Tyre RR' },
+const IMAGE_SLOTS: { angle: ImageAngle; label: string; isMandatory: boolean; desc: string }[] = [
+  { angle: 'front', label: 'Front View', isMandatory: true, desc: 'Hood, grille & bumper' },
+  { angle: 'rear', label: 'Rear View', isMandatory: true, desc: 'Boot lid, bumper & taillights' },
+  { angle: 'left', label: 'Left Side Profile', isMandatory: true, desc: 'Left doors, fenders & sills' },
+  { angle: 'right', label: 'Right Side Profile', isMandatory: true, desc: 'Right doors, fenders & sills' },
+  { angle: 'front-left', label: 'Front-Left 45°', isMandatory: false, desc: 'Front bumper/fender joint' },
+  { angle: 'front-right', label: 'Front-Right 45°', isMandatory: false, desc: 'Front bumper/fender joint' },
+  { angle: 'rear-left', label: 'Rear-Left 45°', isMandatory: false, desc: 'Rear bumper/quarter joint' },
+  { angle: 'rear-right', label: 'Rear-Right 45°', isMandatory: false, desc: 'Rear bumper/quarter joint' },
+  { angle: 'interior', label: 'Interior Cabin', isMandatory: false, desc: 'Upholstery & seats' },
+  { angle: 'dashboard', label: 'Dashboard / Odometer', isMandatory: false, desc: 'Odometer cluster' },
+  { angle: 'engine', label: 'Engine Bay', isMandatory: false, desc: 'Under-hood overview' },
+  { angle: 'tyres', label: 'Tyre Tread & Wheels', isMandatory: false, desc: 'Tread depth & sidewall' },
 ];
 
 interface UploadedImage {
@@ -28,13 +28,12 @@ interface UploadedImage {
 }
 
 interface Props {
-  onSubmit: (files: File[], angles: string[]) => void;
+  onSubmit?: (files: File[], angles: string[]) => void;
 }
 
-export default function ImageUploader({ onSubmit }: Props) {
+export function ImageUploader({ onSubmit }: Props) {
   const [uploaded, setUploaded] = useState<Map<ImageAngle, UploadedImage>>(new Map());
   const [dragOver, setDragOver] = useState<ImageAngle | null>(null);
-  const [submitting, setSubmitting] = useState(false);
 
   const handleFile = useCallback((angle: ImageAngle, file: File) => {
     if (!file.type.startsWith('image/')) return;
@@ -57,114 +56,152 @@ export default function ImageUploader({ onSubmit }: Props) {
   const removeImage = (angle: ImageAngle) => {
     const prev = uploaded.get(angle);
     if (prev) URL.revokeObjectURL(prev.preview);
-    setUploaded((prev) => { const m = new Map(prev); m.delete(angle); return m; });
+    setUploaded((prev) => {
+      const m = new Map(prev);
+      m.delete(angle);
+      return m;
+    });
   };
 
-  const requiredMissing = IMAGE_SLOTS.filter((s) => s.required && !uploaded.has(s.angle));
-  const canSubmit = requiredMissing.length === 0 && uploaded.size > 0;
+  const mandatoryCount = IMAGE_SLOTS.filter((s) => s.isMandatory && uploaded.has(s.angle)).length;
+  const isMandatoryComplete = mandatoryCount === 4;
 
-  const handleSubmit = async () => {
-    if (!canSubmit || submitting) return;
-    setSubmitting(true);
-    const entries = Array.from(uploaded.values());
-    onSubmit(entries.map((e) => e.file), entries.map((e) => e.angle));
+  const handleSubmit = () => {
+    if (!onSubmit) return;
+    const files: File[] = [];
+    const angles: string[] = [];
+    uploaded.forEach((val) => {
+      files.push(val.file);
+      angles.push(val.angle);
+    });
+    onSubmit(files, angles);
   };
 
   return (
-    <div className="card-elevated" style={{ padding: 'var(--space-8)' }}>
-      <h2 className="heading-md" style={{ marginBottom: 'var(--space-2)' }}>Upload Vehicle Images</h2>
-      <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.9rem', marginBottom: 'var(--space-2)' }}>
-        Upload photos from each angle. <strong style={{ color: 'var(--color-text-primary)' }}>Front, Rear, Left, Right are required.</strong>
-      </p>
-      <p style={{ color: 'var(--color-text-muted)', fontSize: '0.8125rem', marginBottom: 'var(--space-6)' }}>
-        More images = better AI analysis. Max 20MB per photo. JPG, PNG, WebP supported.
-      </p>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
+      {/* Status Alert Banner */}
+      {!isMandatoryComplete ? (
+        <Alert variant="warning">
+          <strong>Mandatory Perspective Check:</strong> {mandatoryCount} of 4 required views uploaded. Please upload Front, Rear, Left, and Right views to minimize visual blindspot risk.
+        </Alert>
+      ) : (
+        <Alert variant="success">
+          <strong>Mandatory Views Complete:</strong> All 4 core angles are ready. Additional optional angles will increase overall Evidence Completeness.
+        </Alert>
+      )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 'var(--space-3)', marginBottom: 'var(--space-6)' }}>
-        {IMAGE_SLOTS.map(({ angle, label, required }) => {
-          const img = uploaded.get(angle);
-          const isDrag = dragOver === angle;
+      {/* Grid of Slots */}
+      <div className="grid-3">
+        {IMAGE_SLOTS.map((slot) => {
+          const img = uploaded.get(slot.angle);
+          const isOver = dragOver === slot.angle;
 
           return (
-            <div key={angle} style={{ position: 'relative' }}>
-              <input
-                id={`img-${angle}`}
-                type="file"
-                accept="image/*"
-                style={{ display: 'none' }}
-                onChange={handleInputChange(angle)}
-              />
-              <label
-                htmlFor={`img-${angle}`}
-                onDragOver={(e) => { e.preventDefault(); setDragOver(angle); }}
-                onDragLeave={() => setDragOver(null)}
-                onDrop={handleDrop(angle)}
-                style={{
-                  display: 'block',
-                  aspectRatio: '4/3',
-                  borderRadius: 'var(--radius-md)',
-                  border: `2px dashed ${img ? 'var(--color-accent)' : isDrag ? 'var(--color-primary)' : required ? 'rgba(0,87,255,0.3)' : 'var(--color-border)'}`,
-                  background: img ? 'transparent' : isDrag ? 'var(--color-primary-glow)' : 'var(--color-surface-2)',
-                  cursor: 'pointer',
-                  overflow: 'hidden',
-                  position: 'relative',
-                  transition: 'border-color 0.2s, background 0.2s',
-                }}
-              >
-                {img ? (
-                  // Preview
-                  <img src={img.preview} alt={label} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                ) : (
-                  // Upload zone
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: 8, padding: 8 }}>
-                    <ImageIcon size={22} color={required ? 'var(--color-primary-light)' : 'var(--color-text-muted)'} />
-                    <span style={{ fontSize: '0.75rem', fontWeight: 600, color: required ? 'var(--color-text-secondary)' : 'var(--color-text-muted)', textAlign: 'center', lineHeight: 1.3 }}>
-                      {label}
-                      {required && <span style={{ color: 'var(--color-primary-light)' }}> *</span>}
-                    </span>
-                  </div>
-                )}
-              </label>
+            <div
+              key={slot.angle}
+              onDragOver={(e) => { e.preventDefault(); setDragOver(slot.angle); }}
+              onDragLeave={() => setDragOver(null)}
+              onDrop={handleDrop(slot.angle)}
+              style={{
+                background: 'var(--color-surface)',
+                border: `1px solid ${isOver ? 'var(--color-primary-light)' : 'var(--color-border)'}`,
+                borderRadius: 'var(--radius-lg)',
+                padding: 'var(--space-4)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 'var(--space-3)',
+                transition: 'all var(--transition-fast)',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div>
+                  <h4 style={{ fontWeight: 700, fontSize: '0.9375rem', color: 'var(--color-text-primary)' }}>
+                    {slot.label}
+                  </h4>
+                  <p style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', marginTop: 2 }}>
+                    {slot.desc}
+                  </p>
+                </div>
+                <Badge variant={slot.isMandatory ? 'primary' : 'default'} style={{ fontSize: '0.6875rem' }}>
+                  {slot.isMandatory ? 'Mandatory' : 'Optional'}
+                </Badge>
+              </div>
 
-              {/* Uploaded indicator & remove button */}
-              {img && (
-                <>
-                  <div style={{ position: 'absolute', bottom: 6, left: 6, background: 'rgba(0,0,0,0.6)', borderRadius: 6, padding: '2px 8px', fontSize: '0.7rem', color: '#fff', fontWeight: 600 }}>
-                    {label}
-                  </div>
+              {img ? (
+                <div style={{ position: 'relative', height: 140, borderRadius: 'var(--radius-md)', overflow: 'hidden', border: '1px solid var(--color-border)' }}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={img.preview} alt={slot.label} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   <button
-                    onClick={(e) => { e.preventDefault(); removeImage(angle); }}
-                    style={{ position: 'absolute', top: 6, right: 6, width: 22, height: 22, borderRadius: '50%', background: 'rgba(239,68,68,0.9)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', cursor: 'pointer' }}
+                    onClick={() => removeImage(slot.angle)}
+                    aria-label={`Remove ${slot.label} image`}
+                    style={{
+                      position: 'absolute',
+                      top: 8,
+                      right: 8,
+                      width: 28,
+                      height: 28,
+                      borderRadius: 'var(--radius-full)',
+                      background: 'rgba(239, 68, 68, 0.85)',
+                      border: 'none',
+                      color: '#FFF',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: 'pointer',
+                    }}
                   >
-                    <X size={12} />
+                    <X size={14} />
                   </button>
-                  <div style={{ position: 'absolute', top: 6, left: 6, width: 20, height: 20, borderRadius: '50%', background: 'var(--color-accent)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <Check size={11} color="#0A0C12" strokeWidth={3} />
-                  </div>
-                </>
+                </div>
+              ) : (
+                <label
+                  style={{
+                    height: 140,
+                    borderRadius: 'var(--radius-md)',
+                    border: `2px dashed ${slot.isMandatory ? 'rgba(37, 99, 235, 0.4)' : 'var(--color-border)'}`,
+                    background: isOver ? 'var(--color-primary-glow)' : 'var(--color-surface-elevated)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 6,
+                    cursor: 'pointer',
+                    textAlign: 'center',
+                    padding: 'var(--space-3)',
+                  }}
+                >
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    style={{ display: 'none' }}
+                    onChange={handleInputChange(slot.angle)}
+                  />
+                  <Upload size={20} color={slot.isMandatory ? 'var(--color-primary-light)' : 'var(--color-text-muted)'} />
+                  <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--color-text-primary)' }}>
+                    Upload Photo
+                  </span>
+                </label>
               )}
             </div>
           );
         })}
       </div>
 
-      {/* Upload summary */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-4)', fontSize: '0.875rem', color: 'var(--color-text-secondary)' }}>
-        <span><strong style={{ color: 'var(--color-text-primary)' }}>{uploaded.size}</strong> / {IMAGE_SLOTS.length} images uploaded</span>
-        {!canSubmit && requiredMissing.length > 0 && (
-          <span style={{ color: 'var(--color-warning)' }}>
-            Required: {requiredMissing.map((s) => s.label).join(', ')}
-          </span>
-        )}
-      </div>
-
-      <button
-        className="btn btn-primary btn-full btn-lg"
-        onClick={handleSubmit}
-        disabled={!canSubmit || submitting}
-      >
-        {submitting ? 'Uploading…' : 'Run AI Analysis'} <ArrowRight size={18} />
-      </button>
+      {onSubmit && (
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 'var(--space-4)' }}>
+          <Button
+            variant="primary"
+            size="lg"
+            rightIcon={<ArrowRight size={16} />}
+            disabled={!isMandatoryComplete}
+            onClick={handleSubmit}
+          >
+            Process Selected Images
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
+
+export default ImageUploader;
