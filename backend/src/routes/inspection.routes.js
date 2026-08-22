@@ -1,23 +1,26 @@
 const express = require('express');
 const router = express.Router();
-const auth = require('../middleware/auth');
-const upload = require('../middleware/upload');
+const { optionalAuth } = require('../middleware/auth');
+const {
+  validateInspectionCreation,
+  validateInspectionUpdate,
+} = require('../middleware/validate');
 const {
   createInspection,
-  uploadImages,
-  analyzeInspection,
   getInspection,
   listInspections,
+  updateInspection,
   deleteInspection,
 } = require('../controllers/inspection.controller');
 
-router.use(auth); // All inspection routes require authentication
+// Optional authentication attaches user if token is valid, otherwise permits guest operation
+router.use(optionalAuth);
 
+// Core CRUD Endpoints
 router.get('/', listInspections);
-router.post('/', createInspection);
+router.post('/', validateInspectionCreation, createInspection);
 router.get('/:id', getInspection);
+router.patch('/:id', validateInspectionUpdate, updateInspection);
 router.delete('/:id', deleteInspection);
-router.post('/:id/images', upload.array('images', 15), uploadImages);
-router.post('/:id/analyze', analyzeInspection);
 
 module.exports = router;

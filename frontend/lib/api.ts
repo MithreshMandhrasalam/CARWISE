@@ -2,73 +2,101 @@ import axios from 'axios';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1';
 
-const api = axios.create({
+export const apiClient = axios.create({
   baseURL: API_URL,
-  timeout: 90000, // 90s for AI analysis calls
+  timeout: 30000,
   headers: { 'Content-Type': 'application/json' },
 });
 
-// Attach JWT token to all requests
-api.interceptors.request.use((config) => {
+// Attach token if available in local storage
+apiClient.interceptors.request.use((config) => {
   if (typeof window !== 'undefined') {
-    const token = localStorage.getItem('autotrust_token');
-    if (token) config.headers.Authorization = `Bearer ${token}`;
+    const token = localStorage.getItem('carwise_token') || localStorage.getItem('autotrust_token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
   }
   return config;
 });
 
-// Handle 401 globally
-api.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    if (error.response?.status === 401 && typeof window !== 'undefined') {
-      localStorage.removeItem('autotrust_token');
-      localStorage.removeItem('autotrust_user');
-      window.location.href = '/auth/login';
-    }
-    return Promise.reject(error);
-  }
-);
+export interface ApiResponse<T = any> {
+  success: boolean;
+  data?: T;
+  message?: string;
+  error?: {
+    code: string;
+    message: string;
+    details?: string[];
+  };
+  pagination?: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+    hasNextPage: boolean;
+    hasPrevPage: boolean;
+  };
+}
 
-// ── Auth ──────────────────────────────────────────────────────────
+// ── Auth Endpoints ────────────────────────────────────────────────────────────
 export const authApi = {
-  register: (name: string, email: string, password: string) =>
-    api.post('/auth/register', { name, email, password }),
-  login: (email: string, password: string) =>
-    api.post('/auth/login', { email, password }),
-  me: () => api.get('/auth/me'),
+  register: async (name: string, email: string, password: string): Promise<ApiResponse> => {
+    const res = await apiClient.post('/auth/register', { name, email, password });
+    return res.data;
+  },
+  login: async (email: string, password: string): Promise<ApiResponse> => {
+    const res = await apiClient.post('/auth/login', { email, password });
+    return res.data;
+  },
+  me: async (): Promise<ApiResponse> => {
+    const res = await apiClient.get('/auth/me');
+    return res.data;
+  },
 };
 
-// ── Inspections ───────────────────────────────────────────────────
+// ── Inspection Endpoints ──────────────────────────────────────────────────────
 export const inspectionApi = {
-  create: (vehicleInfo: Record<string, unknown>) =>
-    api.post('/inspections', vehicleInfo),
-  list: (page = 1, limit = 10) =>
-    api.get(`/inspections?page=${page}&limit=${limit}`),
-  get: (id: string) =>
-    api.get(`/inspections/${id}`),
-  delete: (id: string) =>
-    api.delete(`/inspections/${id}`),
-  uploadImages: (id: string, files: File[], angles: string[]) => {
-    const form = new FormData();
-    files.forEach((file) => form.append('images', file));
-    angles.forEach((angle) => form.append('angles', angle));
-    return api.post(`/inspections/${id}/images`, form, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
+  create: async (vehicleInfo: {
+    make: string;
+    model: string;
+    variant?: string;
+    year: number;
+    fuelType: string;
+    transmission: string;
+    mileageKm: number;
+    askingPrice: number;
+    location?: string;
+    registrationNumber?: string;
+  }): Promise<ApiResponse> => {
+    const res = await apiClient.post('/inspections', vehicleInfo);
+    return res.data;
   },
-  analyze: (id: string) =>
-    api.post(`/inspections/${id}/analyze`),
-  pollStatus: async (id: string, onUpdate: (status: string) => void, maxAttempts = 30) => {
-    for (let i = 0; i < maxAttempts; i++) {
-      await new Promise((r) => setTimeout(r, 3000));
-      const { data } = await api.get(`/inspections/${id}`);
-      const status = data.data?.status;
-      onUpdate(status);
-      if (status === 'complete' || status === 'failed') return data.data;
-    }
-    throw new Error('Analysis timed out.');
+
+  list: async (params?: { page?: number; limit?: number; status?: string; make?: string }): Promise<ApiResponse> => {
+    const query = new URLSearchParams();
+    if (params?.page) query.append('page', String(params.page));
+    if (params?.limit) query.append('limit', String(params.limit));
+    if (params?.status) query.append('status', params.status);
+    if (params?.make) query.append('make', params.make);
+
+    const res = await apiClient.get(`/inspections?${query.toString()}`);
+    return res.data;
+  },
+
+  get: async (id: string): Promise<ApiResponse> => {
+    const res = await apiClient.get(`/inspections/${id}`);
+    return res.data;
+  },
+
+  update: async (id: string, updateData: Record<string, any>): Promise<ApiResponse> => {
+    const res = await apiClient.patch(`/inspections/${id}`, updateData);
+    return res.data;
+  },
+
+  delete: async (id: string): Promise<ApiResponse> => {
+    const res = await apiClient.delete(`/inspections/${id}`);
+    return res.data;
   },
 };
 
-export default api;
+export default apiClient;

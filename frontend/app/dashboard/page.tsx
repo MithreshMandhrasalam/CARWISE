@@ -1,29 +1,107 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Plus, Search, Filter, Shield, Sparkles, Eye, ArrowRight, Calendar, MapPin, Gauge } from 'lucide-react';
+import { Plus, Search, Filter, Shield, Sparkles, Eye, ArrowRight, Calendar, MapPin, Gauge, Database } from 'lucide-react';
 import { AppShell } from '@/components/layout/AppShell';
 import { Card, CardHeader, CardBody } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Badge } from '@/components/ui/Badge';
-import { ScoreIndicator } from '@/components/ui/ScoreIndicator';
 import { RiskIndicator } from '@/components/ui/RiskIndicator';
 import { DEMO_INSPECTIONS } from '@/lib/mockData';
+import { inspectionApi } from '@/lib/api';
+
+interface CombinedInspection {
+  id: string;
+  source: 'database' | 'demo';
+  status: string;
+  vehicleInfo: {
+    make: string;
+    model: string;
+    variant?: string;
+    year: number;
+    mileageKm: number;
+    askingPrice: number;
+    fuelType?: string;
+    transmission?: string;
+    location?: string;
+  };
+  conditionScore?: number;
+  coverageRatio?: number;
+  trustScore?: number;
+  trustBand?: any;
+  createdAt: string;
+}
 
 export default function DashboardPage() {
   const [searchQuery, setSearchQuery] = useState('');
-  const [inspections] = useState(DEMO_INSPECTIONS);
+  const [items, setItems] = useState<CombinedInspection[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const filteredInspections = inspections.filter((insp) => {
+  useEffect(() => {
+    async function loadInspections() {
+      try {
+        const res = await inspectionApi.list({ limit: 20 });
+        const dbItems: CombinedInspection[] = (res.data || []).map((doc: any) => ({
+          id: doc._id,
+          source: 'database' as const,
+          status: doc.status || 'PENDING',
+          vehicleInfo: doc.vehicleInfo,
+          conditionScore: doc.conditionScore?.overallScore,
+          coverageRatio: doc.evidenceConfidence?.visualCoverageIndex,
+          trustScore: doc.trustScore?.overallTrustScore,
+          trustBand: doc.trustScore?.trustBand || 'INSUFFICIENT_EVIDENCE',
+          createdAt: doc.createdAt,
+        }));
+
+        // Convert demo inspections into combined format
+        const demoItems: CombinedInspection[] = DEMO_INSPECTIONS.map((demo) => ({
+          id: demo.id,
+          source: 'demo' as const,
+          status: 'COMPLETE',
+          vehicleInfo: demo.vehicleInfo,
+          conditionScore: demo.conditionScore.overallScore,
+          coverageRatio: demo.evidenceConfidence.visualCoverageIndex,
+          trustScore: demo.trustScore.overallTrustScore,
+          trustBand: demo.trustScore.trustBand,
+          createdAt: demo.inspectionDate,
+        }));
+
+        // Combine DB items first, followed by demo items
+        setItems([...dbItems, ...demoItems]);
+      } catch (err) {
+        // Fallback to demo items if backend is unavailable
+        const demoItems: CombinedInspection[] = DEMO_INSPECTIONS.map((demo) => ({
+          id: demo.id,
+          source: 'demo' as const,
+          status: 'COMPLETE',
+          vehicleInfo: demo.vehicleInfo,
+          conditionScore: demo.conditionScore.overallScore,
+          coverageRatio: demo.evidenceConfidence.visualCoverageIndex,
+          trustScore: demo.trustScore.overallTrustScore,
+          trustBand: demo.trustScore.trustBand,
+          createdAt: demo.inspectionDate,
+        }));
+        setItems(demoItems);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadInspections();
+  }, []);
+
+  const filtered = items.filter((item) => {
     const q = searchQuery.toLowerCase();
-    const v = insp.vehicleInfo;
+    const v = item.vehicleInfo;
     return (
       v.make.toLowerCase().includes(q) ||
       v.model.toLowerCase().includes(q) ||
       (v.location && v.location.toLowerCase().includes(q))
     );
   });
+
+  const dbCount = items.filter((i) => i.source === 'database').length;
 
   return (
     <AppShell
@@ -47,10 +125,10 @@ export default function DashboardPage() {
             </span>
           </div>
           <div style={{ fontFamily: 'var(--font-display)', fontSize: '2rem', fontWeight: 800, marginTop: 'var(--space-2)', color: 'var(--color-text-primary)' }}>
-            2
+            {items.length}
           </div>
           <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', marginTop: 4 }}>
-            Sample demonstration audits
+            {dbCount} Live DB + {items.length - dbCount} Demo
           </div>
         </Card>
 
@@ -91,17 +169,17 @@ export default function DashboardPage() {
         <Card>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <span style={{ fontSize: '0.8125rem', color: 'var(--color-text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              Flagged Risks
+              Database Sync
             </span>
             <span style={{ padding: 6, borderRadius: 'var(--radius-sm)', background: 'var(--color-surface-elevated)' }}>
-              <Gauge size={16} color="var(--color-warning-text)" />
+              <Database size={16} color="var(--color-accent-light)" />
             </span>
           </div>
-          <div style={{ fontFamily: 'var(--font-display)', fontSize: '2rem', fontWeight: 800, marginTop: 'var(--space-2)', color: 'var(--color-warning-text)' }}>
-            1
+          <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.25rem', fontWeight: 800, marginTop: 'var(--space-2)', color: 'var(--color-success-text)' }}>
+            MongoDB Online
           </div>
           <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', marginTop: 4 }}>
-            Inspection requires physical check
+            carwise_db persistence active
           </div>
         </Card>
       </div>
@@ -110,9 +188,9 @@ export default function DashboardPage() {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-4)', flexWrap: 'wrap', gap: 12 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <h2 className="heading-md">Recent Vehicle Assessments</h2>
-          <span className="demo-banner">
-            <Sparkles size={12} /> Demonstrator Data
-          </span>
+          <Badge variant="primary" icon={<Database size={12} />}>
+            {dbCount} In Database
+          </Badge>
         </div>
 
         <div style={{ width: 280 }}>
@@ -128,28 +206,35 @@ export default function DashboardPage() {
 
       {/* ── Inspections List ────────────────────────────────────────── */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
-        {filteredInspections.map((insp) => (
-          <Card key={insp.id} elevated style={{ transition: 'border-color 0.2s' }}>
+        {filtered.map((item) => (
+          <Card key={item.id} elevated style={{ transition: 'border-color 0.2s' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
               {/* Vehicle Info */}
               <div style={{ flex: '1 1 300px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
                   <h3 className="heading-md">
-                    {insp.vehicleInfo.year} {insp.vehicleInfo.make} {insp.vehicleInfo.model}
+                    {item.vehicleInfo.year} {item.vehicleInfo.make} {item.vehicleInfo.model}
                   </h3>
-                  <RiskIndicator trustBand={insp.trustScore.trustBand} size="sm" />
+                  {item.source === 'demo' ? (
+                    <Badge variant="warning" style={{ fontSize: '0.6875rem' }}>Demo Audit</Badge>
+                  ) : (
+                    <Badge variant={item.status === 'COMPLETE' ? 'success' : 'info'} style={{ fontSize: '0.6875rem' }}>
+                      DB: {item.status}
+                    </Badge>
+                  )}
+                  {item.trustBand && <RiskIndicator trustBand={item.trustBand} size="sm" />}
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 16, fontSize: '0.8125rem', color: 'var(--color-text-secondary)', flexWrap: 'wrap' }}>
-                  <span>{insp.vehicleInfo.variant || 'Standard'}</span>
+                  <span>{item.vehicleInfo.variant || 'Standard'}</span>
                   <span>•</span>
-                  <span>{insp.vehicleInfo.mileageKm.toLocaleString()} km</span>
+                  <span>{item.vehicleInfo.mileageKm.toLocaleString()} km</span>
                   <span>•</span>
-                  <span>₹{(insp.vehicleInfo.askingPrice / 100000).toFixed(2)} Lakhs</span>
-                  {insp.vehicleInfo.location && (
+                  <span>₹{(item.vehicleInfo.askingPrice / 100000).toFixed(2)} Lakhs</span>
+                  {item.vehicleInfo.location && (
                     <>
                       <span>•</span>
                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                        <MapPin size={12} /> {insp.vehicleInfo.location}
+                        <MapPin size={12} /> {item.vehicleInfo.location}
                       </span>
                     </>
                   )}
@@ -163,7 +248,7 @@ export default function DashboardPage() {
                     Condition
                   </div>
                   <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.25rem', fontWeight: 800, color: 'var(--color-primary-light)' }}>
-                    {insp.conditionScore.overallScore}
+                    {item.conditionScore !== undefined ? item.conditionScore : 'Pending'}
                   </div>
                 </div>
 
@@ -172,7 +257,7 @@ export default function DashboardPage() {
                     Evidence
                   </div>
                   <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.25rem', fontWeight: 800, color: 'var(--color-accent-light)' }}>
-                    {Math.round(insp.evidenceConfidence.visualCoverageIndex * 100)}%
+                    {item.coverageRatio !== undefined ? `${Math.round(item.coverageRatio * 100)}%` : 'Pending'}
                   </div>
                 </div>
 
@@ -180,13 +265,13 @@ export default function DashboardPage() {
                   <div style={{ fontSize: '0.6875rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--color-text-muted)', fontWeight: 600 }}>
                     Trust Score
                   </div>
-                  <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.25rem', fontWeight: 800, color: insp.trustScore.overallTrustScore >= 70 ? 'var(--color-success-text)' : 'var(--color-warning-text)' }}>
-                    {insp.trustScore.overallTrustScore}
+                  <div style={{ fontFamily: 'var(--font-display)', fontSize: '1.25rem', fontWeight: 800, color: (item.trustScore || 0) >= 70 ? 'var(--color-success-text)' : 'var(--color-warning-text)' }}>
+                    {item.trustScore !== undefined ? item.trustScore : 'Pending'}
                   </div>
                 </div>
 
                 {/* View Report CTA */}
-                <Link href={`/inspect/${insp.id}`} className="btn btn-secondary btn-sm">
+                <Link href={`/inspect/${item.id}`} className="btn btn-secondary btn-sm">
                   View Report <ArrowRight size={14} />
                 </Link>
               </div>

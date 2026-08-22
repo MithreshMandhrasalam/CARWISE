@@ -30,8 +30,14 @@ app.use(
   '/api/',
   rateLimit({
     windowMs: 15 * 60 * 1000, // 15 min
-    max: 200,
-    message: { success: false, message: 'Too many requests. Please try again later.' },
+    max: 300,
+    message: {
+      success: false,
+      error: {
+        code: 'RATE_LIMIT_EXCEEDED',
+        message: 'Too many requests. Please try again later.',
+      },
+    },
   })
 );
 
@@ -53,12 +59,27 @@ app.use('/api/v1/inspections', inspectionRoutes);
 
 // ── Health Check ──────────────────────────────────────────────────────────────
 app.get('/health', (req, res) => {
-  res.json({ success: true, service: 'CARWISE API', version: '1.0.0', uptime: process.uptime() });
+  res.json({
+    success: true,
+    data: {
+      service: 'CARWISE API Gateway',
+      status: 'HEALTHY',
+      version: '1.0.0',
+      uptime: process.uptime(),
+      timestamp: new Date().toISOString(),
+    },
+  });
 });
 
 // ── 404 Handler ───────────────────────────────────────────────────────────────
 app.use((req, res) => {
-  res.status(404).json({ success: false, message: `Route ${req.path} not found.` });
+  res.status(404).json({
+    success: false,
+    error: {
+      code: 'ROUTE_NOT_FOUND',
+      message: `Route ${req.method} ${req.path} not found on CARWISE API.`,
+    },
+  });
 });
 
 // ── Error Handler ─────────────────────────────────────────────────────────────
@@ -66,9 +87,12 @@ app.use(errorHandler);
 
 // ── Start Server ──────────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 4000;
-app.listen(PORT, () => {
-  console.log(`🚀 CARWISE API running on http://localhost:${PORT}`);
-  console.log(`   Environment: ${process.env.NODE_ENV || 'development'}`);
-});
+let server;
+if (process.env.NODE_ENV !== 'test') {
+  server = app.listen(PORT, () => {
+    console.log(`🚀 CARWISE API running on http://localhost:${PORT}`);
+    console.log(`   Environment: ${process.env.NODE_ENV || 'development'}`);
+  });
+}
 
 module.exports = app;

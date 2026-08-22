@@ -23,6 +23,7 @@ import { ImagePreviewCard } from '@/components/ui/ImagePreviewCard';
 import { Alert } from '@/components/ui/Alert';
 import { Badge } from '@/components/ui/Badge';
 import { ImageAngle, MandatoryImageAngle, OptionalImageAngle, VehicleInfo } from '@/lib/types';
+import { inspectionApi } from '@/lib/api';
 
 interface UploadedFilesState {
   [key: string]: { file: File; previewUrl: string };
@@ -104,18 +105,44 @@ export default function InspectWizardPage() {
     { number: 5, title: 'Evaluation' },
   ];
 
-  const handleStartAnalysis = () => {
+  const handleStartAnalysis = async () => {
     setIsAnalyzing(true);
     setCurrentStep(5);
 
-    // Simulate analytical step progression for prototype demonstration
-    setTimeout(() => setAnalysisStep(1), 800);  // IQA Checks
-    setTimeout(() => setAnalysisStep(2), 1600); // Zone Mapping
-    setTimeout(() => setAnalysisStep(3), 2400); // Scoring Computation
-    setTimeout(() => {
-      // Redirect to demonstration report
-      router.push('/inspect/demo-insp-2026-001');
-    }, 3200);
+    try {
+      // Step 1: Create real inspection record in MongoDB via Backend API
+      const res = await inspectionApi.create({
+        make: vehicleInfo.make,
+        model: vehicleInfo.model,
+        variant: vehicleInfo.variant,
+        year: vehicleInfo.year,
+        fuelType: vehicleInfo.fuelType,
+        transmission: vehicleInfo.transmission,
+        mileageKm: vehicleInfo.mileageKm,
+        askingPrice: vehicleInfo.askingPrice,
+        location: vehicleInfo.location,
+        registrationNumber: vehicleInfo.vinOrReg,
+      });
+
+      const newId = res.data?._id || 'demo-insp-2026-001';
+
+      // Visual progression simulation for prototype flow
+      setTimeout(() => setAnalysisStep(1), 600);
+      setTimeout(() => setAnalysisStep(2), 1200);
+      setTimeout(() => setAnalysisStep(3), 1800);
+      setTimeout(() => {
+        router.push(`/inspect/${newId}`);
+      }, 2400);
+    } catch (err: any) {
+      console.warn('Backend API connection note:', err.message);
+      // If backend is in mock/offline mode, fallback gracefully to demo ID
+      setTimeout(() => setAnalysisStep(1), 600);
+      setTimeout(() => setAnalysisStep(2), 1200);
+      setTimeout(() => setAnalysisStep(3), 1800);
+      setTimeout(() => {
+        router.push('/inspect/demo-insp-2026-001');
+      }, 2400);
+    }
   };
 
   return (

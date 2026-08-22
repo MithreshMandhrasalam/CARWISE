@@ -1,160 +1,240 @@
-const path = require('path');
+const mongoose = require('mongoose');
 const Inspection = require('../models/Inspection');
-const aiService = require('../services/aiService');
 
-const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:4000';
-
-// POST /api/v1/inspections
+/**
+ * POST /api/v1/inspections
+ * Creates a new inspection with validated vehicle info. Initial status: PENDING.
+ */
 const createInspection = async (req, res, next) => {
   try {
-    const { make, model, variant, year, fuelType, transmission, mileageKm, askingPrice, location } =
-      req.body;
-
-    if (!make || !model || !year || !fuelType || !transmission || !mileageKm || !askingPrice) {
-      return res
-        .status(400)
-        .json({ success: false, message: 'Missing required vehicle information.' });
-    }
+    const vehicleData = req.validatedData;
 
     const inspection = await Inspection.create({
-      userId: req.user._id,
-      vehicleInfo: {
-        make,
-        model,
-        variant: variant || '',
-        year: parseInt(year),
-        fuelType,
-        transmission,
-        mileageKm: parseInt(mileageKm),
-        askingPrice: parseFloat(askingPrice),
-        location: location || '',
-      },
+      userId: req.user ? req.user._id : null,
+      status: 'PENDING',
+      vehicleInfo: vehicleData,
+      images: [],
     });
 
-    res.status(201).json({ success: true, data: inspection });
+    res.status(201).json({
+      success: true,
+      data: inspection,
+      message: 'Inspection record successfully created in pending state.',
+    });
   } catch (err) {
     next(err);
   }
 };
 
-// POST /api/v1/inspections/:id/images
-const uploadImages = async (req, res, next) => {
-  try {
-    const inspection = await Inspection.findOne({ _id: req.params.id, userId: req.user._id });
-    if (!inspection) {
-      return res.status(404).json({ success: false, message: 'Inspection not found.' });
-    }
-
-    if (!req.files || req.files.length === 0) {
-      return res.status(400).json({ success: false, message: 'No images uploaded.' });
-    }
-
-    const angles = req.body.angles
-      ? Array.isArray(req.body.angles)
-        ? req.body.angles
-        : [req.body.angles]
-      : [];
-
-    const newImages = req.files.map((file, idx) => ({
-      angle: angles[idx] || 'front',
-      storageKey: file.path,
-      url: `${BACKEND_URL}/uploads/${inspection._id}/${file.filename}`,
-    }));
-
-    inspection.images.push(...newImages);
-    await inspection.save();
-
-    res.json({ success: true, data: { images: inspection.images } });
-  } catch (err) {
-    next(err);
-  }
-};
-
-// POST /api/v1/inspections/:id/analyze
-const analyzeInspection = async (req, res, next) => {
-  try {
-    const inspection = await Inspection.findOne({ _id: req.params.id, userId: req.user._id });
-    if (!inspection) {
-      return res.status(404).json({ success: false, message: 'Inspection not found.' });
-    }
-
-    if (inspection.status === 'processing') {
-      return res.status(409).json({ success: false, message: 'Analysis already in progress.' });
-    }
-
-    // Mark as processing
-    inspection.status = 'processing';
-    await inspection.save();
-
-    // Call AI service (async — runs after response)
-    res.json({ success: true, message: 'Analysis started.', inspectionId: inspection._id });
-
-    try {
-      const results = await aiService.runFullAnalysis(inspection);
-      inspection.aiResults = results;
-      inspection.status = 'complete';
-      inspection.completedAt = new Date();
-      await inspection.save();
-    } catch (aiErr) {
-      console.error('[AI Analysis Error]', aiErr.message);
-      inspection.status = 'failed';
-      await inspection.save();
-    }
-  } catch (err) {
-    next(err);
-  }
-};
-
-// GET /api/v1/inspections/:id
+/**
+ * GET /api/v1/inspections/:id
+ * Retrieves an inspection by its unique MongoDB ObjectId.
+ */
 const getInspection = async (req, res, next) => {
   try {
-    const inspection = await Inspection.findOne({ _id: req.params.id, userId: req.user._id });
-    if (!inspection) {
-      return res.status(404).json({ success: false, message: 'Inspection not found.' });
+    const { id } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: 'INVALID_ID',
+          message: 'The provided inspection ID is not a valid identifier.',
+        },
+      });
     }
-    res.json({ success: true, data: inspection });
+
+    const query = { _id: id, isDeleted: false };
+    // If user is authenticated, allow viewing their own or public records
+    if (req.user) {
+      // Authenticated users can view records they own or unclaimed records
+      query.$or = [{ userId: req.user._id }, { userId: null }];
+    }
+
+    const inspection = await Inspection.findOne(query).select('-__v');
+
+    if (!inspection) {
+      return res.status(404).json({
+        success: false,
+        error: {
+          code: 'NOT_FOUND',
+          message: 'Inspection record not found or has been deleted.',
+        },
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: inspection,
+    });
   } catch (err) {
     next(err);
   }
 };
 
-// GET /api/v1/inspections
+/**
+ * GET /api/v1/inspections
+ * Lists inspections with pagination, sorting, and optional status/make filters.
+ */
 const listInspections = async (req, res, next) => {
   try {
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const limit = Math.min(50, Math.max(1, parseInt(req.query.limit, 10) || 10));
     const skip = (page - 1) * limit;
 
+    const filter = { isDeleted: false };
+
+    // Scope to user if authenticated
+    if (req.user) {
+      filter.userId = req.user._id;
+    }
+
+    // Optional status filter
+    if (req.query.status) {
+      filter.status = String(req.query.status).toUpperCase();
+    }
+
+    // Optional make filter
+    if (req.query.make) {
+      filter['vehicleInfo.make'] = { $regex: String(req.query.make).trim(), $options: 'i' };
+    }
+
+    // Sorting
+    const sortField = req.query.sortBy === 'updatedAt' ? 'updatedAt' : 'createdAt';
+    const sortOrder = req.query.order === 'asc' ? 1 : -1;
+    const sortOptions = { [sortField]: sortOrder };
+
     const [inspections, total] = await Promise.all([
-      Inspection.find({ userId: req.user._id })
-        .sort({ createdAt: -1 })
+      Inspection.find(filter)
+        .sort(sortOptions)
         .skip(skip)
         .limit(limit)
-        .select('-aiResults.damageDetection.detections -images.storageKey'),
-      Inspection.countDocuments({ userId: req.user._id }),
+        .select('vehicleInfo status createdAt updatedAt images.viewType images.qualityStatus trustScore conditionScore'),
+      Inspection.countDocuments(filter),
     ]);
 
-    res.json({
+    const totalPages = Math.ceil(total / limit) || 1;
+
+    res.status(200).json({
       success: true,
       data: inspections,
-      pagination: { page, limit, total, pages: Math.ceil(total / limit) },
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPrevPage: page > 1,
+      },
     });
   } catch (err) {
     next(err);
   }
 };
 
-// DELETE /api/v1/inspections/:id
+/**
+ * PATCH /api/v1/inspections/:id
+ * Safely updates vehicle information fields only.
+ */
+const updateInspection = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: 'INVALID_ID',
+          message: 'The provided inspection ID is not a valid identifier.',
+        },
+      });
+    }
+
+    const query = { _id: id, isDeleted: false };
+    if (req.user) {
+      query.userId = req.user._id;
+    }
+
+    const inspection = await Inspection.findOne(query);
+
+    if (!inspection) {
+      return res.status(404).json({
+        success: false,
+        error: {
+          code: 'NOT_FOUND',
+          message: 'Inspection record not found or update unauthorized.',
+        },
+      });
+    }
+
+    // Prevent modifying completed or processing inspections
+    if (['PROCESSING', 'COMPLETE'].includes(inspection.status)) {
+      return res.status(409).json({
+        success: false,
+        error: {
+          code: 'STATE_LOCKED',
+          message: `Cannot update vehicle details while inspection is in '${inspection.status}' state.`,
+        },
+      });
+    }
+
+    // Apply only validated vehicle info fields
+    Object.assign(inspection.vehicleInfo, req.validatedUpdateData);
+    await inspection.save();
+
+    res.status(200).json({
+      success: true,
+      data: inspection,
+      message: 'Vehicle information successfully updated.',
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * DELETE /api/v1/inspections/:id
+ * Performs safe soft deletion of an inspection record.
+ */
 const deleteInspection = async (req, res, next) => {
   try {
-    const inspection = await Inspection.findOneAndDelete({
-      _id: req.params.id,
-      userId: req.user._id,
-    });
-    if (!inspection) {
-      return res.status(404).json({ success: false, message: 'Inspection not found.' });
+    const { id } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: 'INVALID_ID',
+          message: 'The provided inspection ID is not a valid identifier.',
+        },
+      });
     }
-    res.json({ success: true, message: 'Inspection deleted.' });
+
+    const query = { _id: id, isDeleted: false };
+    if (req.user) {
+      query.userId = req.user._id;
+    }
+
+    const inspection = await Inspection.findOne(query);
+
+    if (!inspection) {
+      return res.status(404).json({
+        success: false,
+        error: {
+          code: 'NOT_FOUND',
+          message: 'Inspection record not found or already deleted.',
+        },
+      });
+    }
+
+    inspection.isDeleted = true;
+    inspection.deletedAt = new Date();
+    await inspection.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Inspection record successfully archived (soft deleted).',
+    });
   } catch (err) {
     next(err);
   }
@@ -162,9 +242,8 @@ const deleteInspection = async (req, res, next) => {
 
 module.exports = {
   createInspection,
-  uploadImages,
-  analyzeInspection,
   getInspection,
   listInspections,
+  updateInspection,
   deleteInspection,
 };
