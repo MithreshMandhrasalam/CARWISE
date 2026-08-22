@@ -2,10 +2,10 @@ import type { Metadata } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'AutoTrust AI — Used Car Inspection Platform',
+  title: 'CARWISE — Car Assessment & Risk With Intelligent Safety & Evidence',
   description:
-    'AI-powered used car inspection and trust platform. Detect vehicle damage, estimate fair market prices, and get a comprehensive vehicle condition report before you buy.',
-  keywords: 'used car inspection, AI car evaluation, vehicle damage detection, car price estimator, AutoTrust',
+    'CARWISE is a software-only, AI-powered used-vehicle assessment and buyer decision-support platform. See the Evidence. Know the Risk. Buy Wiser.',
+  keywords: 'CARWISE, used car inspection, AI car evaluation, vehicle damage detection, car price estimator, trust score, evidence confidence',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

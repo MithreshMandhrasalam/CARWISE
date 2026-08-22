@@ -13,11 +13,11 @@ export default function Footer() {
       <div className="container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <Shield size={14} color="var(--color-primary-light)" />
-          <span>AutoTrustAI — Final Year CSE Project</span>
+          <span>CARWISE — Car Assessment & Risk With Intelligent Safety & Evidence</span>
         </div>
         <p style={{ textAlign: 'center', maxWidth: 600, fontSize: '0.75rem' }}>
-          ⚠️ This is an AI decision-support tool and does not replace a professional mechanical inspection.
-          Always physically inspect any vehicle before purchase.
+          &ldquo;See the Evidence. Know the Risk. Buy Wiser.&rdquo;<br />
+          ⚠️ CARWISE is an AI decision-support tool and does not replace a professional mechanical inspection.
         </p>
         <div style={{ display: 'flex', gap: 16 }}>
           <Link href="/" style={{ color: 'var(--color-text-muted)' }}>Home</Link>

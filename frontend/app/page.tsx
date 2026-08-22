@@ -70,16 +70,16 @@ export default function HomePage() {
 
         <div className="container" style={{ textAlign: 'center', position: 'relative' }}>
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, marginBottom: 'var(--space-6)', padding: '6px 16px', borderRadius: 'var(--radius-full)', background: 'rgba(0,87,255,0.1)', border: '1px solid rgba(0,87,255,0.25)', fontSize: '0.875rem', color: 'var(--color-primary-light)', fontWeight: 500 }}>
-            <Shield size={14} /> AI-Powered Vehicle Inspection
+            <Shield size={14} /> Car Assessment & Risk With Intelligent Safety & Evidence
           </div>
 
           <h1 className="heading-xl" style={{ marginBottom: 'var(--space-5)', background: 'linear-gradient(135deg, #F0F2F8 40%, #9BA3C2)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-            Buy Used Cars With<br />Confidence
+            See the Evidence. Know the Risk.<br />Buy Wiser.
           </h1>
 
-          <p style={{ fontSize: '1.125rem', color: 'var(--color-text-secondary)', maxWidth: 560, margin: '0 auto var(--space-10)', lineHeight: 1.7 }}>
-            AutoTrust AI analyses vehicle photos, detects visible damage, estimates fair market prices,
-            and generates an explainable condition report — before you hand over a single rupee.
+          <p style={{ fontSize: '1.125rem', color: 'var(--color-text-secondary)', maxWidth: 620, margin: '0 auto var(--space-10)', lineHeight: 1.7 }}>
+            <strong>CARWISE</strong> analyses available vehicle evidence, identifies visible abnormalities,
+            estimates condition and price-related risk, and generates prioritized inspection recommendations — before you buy.
           </p>
 
           <div style={{ display: 'flex', gap: 'var(--space-4)', justifyContent: 'center', flexWrap: 'wrap' }}>
@@ -94,8 +94,8 @@ export default function HomePage() {
           {/* Stats row */}
           <div style={{ display: 'flex', justifyContent: 'center', gap: 'var(--space-12)', marginTop: 'var(--space-16)', flexWrap: 'wrap' }}>
             {[
-              { label: 'Damage Types Detected', value: '10+' },
-              { label: 'Condition Score Dimensions', value: '8' },
+              { label: 'Vehicle Zones Evaluated', value: '8' },
+              { label: 'Condition & Trust Scores', value: '0–100' },
               { label: 'Inspection Checklist Items', value: '30+' },
             ].map((s) => (
               <div key={s.label} style={{ textAlign: 'center' }}>
@@ -111,8 +111,8 @@ export default function HomePage() {
       <section className="section">
         <div className="container">
           <div style={{ textAlign: 'center', marginBottom: 'var(--space-12)' }}>
-            <h2 className="heading-lg" style={{ marginBottom: 'var(--space-3)' }}>What AutoTrust AI Analyses</h2>
-            <p className="text-muted">Six integrated AI modules working together for a complete vehicle report.</p>
+            <h2 className="heading-lg" style={{ marginBottom: 'var(--space-3)' }}>What CARWISE Analyses</h2>
+            <p className="text-muted">Integrated multi-layer analytical modules working together for an auditable vehicle report.</p>
           </div>
 
           <div className="grid-3">

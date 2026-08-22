@@ -4,30 +4,30 @@ services:
   # ── MongoDB ────────────────────────────────────────────────────────
   mongo:
     image: mongo:7.0
-    container_name: autotrust_mongo
+    container_name: carwise_mongo
     restart: unless-stopped
     ports:
       - '27017:27017'
     volumes:
       - mongo_data:/data/db
     environment:
-      MONGO_INITDB_DATABASE: autotrust_ai
+      MONGO_INITDB_DATABASE: carwise_db
     networks:
-      - autotrust_net
+      - carwise_net
 
   # ── Node.js / Express API ──────────────────────────────────────────
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: autotrust_backend
+    container_name: carwise_backend
     restart: unless-stopped
     ports:
       - '4000:4000'
     env_file:
       - ./backend/.env
     environment:
-      MONGO_URI: mongodb://mongo:27017/autotrust_ai
+      MONGO_URI: mongodb://mongo:27017/carwise_db
       AI_SERVICE_URL: http://ai-service:8000
       NODE_ENV: development
     volumes:
@@ -38,14 +38,14 @@ services:
       - mongo
       - ai-service
     networks:
-      - autotrust_net
+      - carwise_net
 
   # ── Python FastAPI AI Service ──────────────────────────────────────
   ai-service:
     build:
       context: ./ai-service
       dockerfile: Dockerfile
-    container_name: autotrust_ai_service
+    container_name: carwise_ai_service
     restart: unless-stopped
     ports:
       - '8000:8000'
@@ -55,14 +55,14 @@ services:
       - ./ai-service:/app
       - ai_model_weights:/app/app/ml/weights
     networks:
-      - autotrust_net
+      - carwise_net
 
   # ── Next.js Frontend ───────────────────────────────────────────────
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    container_name: autotrust_frontend
+    container_name: carwise_frontend
     restart: unless-stopped
     ports:
       - '3000:3000'
@@ -73,7 +73,7 @@ services:
     depends_on:
       - backend
     networks:
-      - autotrust_net
+      - carwise_net
 
 volumes:
   mongo_data:
@@ -81,5 +81,5 @@ volumes:
   ai_model_weights:
 
 networks:
-  autotrust_net:
+  carwise_net:
     driver: bridge

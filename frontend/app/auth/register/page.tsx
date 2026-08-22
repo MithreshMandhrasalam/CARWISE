@@ -38,8 +38,8 @@ export default function RegisterPage() {
             <div style={{ width: 44, height: 44, borderRadius: 12, background: 'linear-gradient(135deg, var(--color-primary), var(--color-accent))', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <Shield size={22} color="#fff" />
             </div>
-            <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.25rem' }}>
-              AutoTrust<span style={{ color: 'var(--color-accent)' }}>AI</span>
+            <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '1.35rem', letterSpacing: '0.04em' }}>
+              CAR<span style={{ color: 'var(--color-accent)' }}>WISE</span>
             </span>
           </Link>
         </div>

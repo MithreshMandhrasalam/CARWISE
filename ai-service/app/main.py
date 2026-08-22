@@ -4,8 +4,8 @@ from app.config import settings
 from app.routers import damage_detection, price_estimation, condition_score
 
 app = FastAPI(
-    title="AutoTrust AI Service",
-    description="Computer vision and ML backend for vehicle inspection analysis.",
+    title="CARWISE AI Service",
+    description="Car Assessment & Risk With Intelligent Safety & Evidence — Analytical Backend",
     version="1.0.0",
     docs_url="/docs",
     redoc_url="/redoc",
@@ -28,7 +28,7 @@ app.include_router(condition_score.router, prefix="/api/v1/ai/score", tags=["Con
 @app.get("/health")
 async def health():
     return {
-        "service": "AutoTrust AI Service",
+        "service": "CARWISE AI Service",
         "version": "1.0.0",
         "mockMode": settings.ai_service_use_mock,
         "models": {

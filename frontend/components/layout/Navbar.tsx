@@ -34,8 +34,8 @@ export default function Navbar() {
           }}>
             <Shield size={18} color="#fff" />
           </div>
-          <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.1rem', color: 'var(--color-text-primary)' }}>
-            AutoTrust<span style={{ color: 'var(--color-accent)' }}>AI</span>
+          <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '1.2rem', letterSpacing: '0.04em', color: 'var(--color-text-primary)' }}>
+            CAR<span style={{ color: 'var(--color-accent)' }}>WISE</span>
           </span>
         </Link>
 

@@ -1,7 +1,12 @@
-# AutoTrust AI — Refined System Architecture & Specification Document
+# CARWISE — Refined System Architecture & Specification Document
+### Car Assessment & Risk With Intelligent Safety & Evidence
+> *"See the Evidence. Know the Risk. Buy Wiser."*
 
 ## Executive Summary
-AutoTrust AI is an AI-assisted used-car evaluation and trust platform designed to provide transparent, verifiable, and explainable condition and risk assessments for prospective car buyers.
+**CARWISE** is a software-only, AI-powered used-vehicle assessment and buyer decision-support platform.
+
+**Core Purpose:**
+Help used-car buyers make safer and more informed purchasing decisions by analyzing available vehicle evidence, identifying visible abnormalities, estimating condition and price-related risk, and generating prioritized inspection recommendations.
 
 This document details the refined technical architecture, establishing strict separation between statistical machine learning models, deterministic validation rules, scoring formulations, and domain heuristics.
 
@@ -9,9 +14,9 @@ This document details the refined technical architecture, establishing strict se
 
 ## 1. System Taxonomy & Boundary Definitions
 
-To ensure scientific credibility and prevent misleading representations, all algorithms and data processors in AutoTrust AI are categorized into one of four analytical layers:
+To ensure scientific credibility and prevent misleading representations, all algorithms and data processors in CARWISE are categorized into one of four analytical layers:
 
-| Layer | Type | Responsibility | Examples in AutoTrust AI |
+| Layer | Type | Responsibility | Examples in CARWISE |
 | :--- | :--- | :--- | :--- |
 | **Layer 1** | **AI / ML Models** *(Statistical Inference)* | Probabilistic pattern recognition and regression on unstructured data. | • Object Detection for body damages (Dents, Scratches, Cracks, Rust)<br>• Damage Severity Head (Minor, Moderate, Severe)<br>• ML View/Vehicle Classifier (When validated)<br>• Fair-Market Valuation Regressor (When validated on Indian used-car dataset) |
 | **Layer 2** | **Deterministic Rule Engines** *(Hard Logic)* | Binary constraints, sanity gates, and regulatory validations. | • 4-Mandatory View Presence Checker<br>• Image dimension / payload size validation<br>• Deterministic IQA: Laplacian blur, luminance exposure, pHash duplicate detection<br>• Odometer rollback anomaly check<br>• Logical Vehicle-Zone Mapper & Recommendation Rules |
@@ -109,7 +114,7 @@ flowchart TB
 
 ## 4. Pluggable CV Architecture (`BaseDamageDetector`)
 
-The CV damage detection pipeline is decoupled using the **Strategy Pattern**. The system defines a generic interface `BaseDamageDetector`, allowing the model backend to be swapped (Mock $\to$ YOLOv8/9/10/11 $\to$ TorchVision $\to$ Cloud API) with zero modifications to downstream reasoning or scoring engines.
+The CV damage detection pipeline is decoupled using the **Strategy Pattern**. The system defines a generic interface `BaseDamageDetector`, allowing the model backend to be swapped (Mock $\to$ YOLO $\to$ TorchVision $\to$ Cloud API) with zero modifications to downstream reasoning or scoring engines.
 
 ### Abstract Adapter Interface
 ```python

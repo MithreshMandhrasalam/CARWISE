@@ -53,7 +53,7 @@ app.use('/api/v1/inspections', inspectionRoutes);
 
 // ── Health Check ──────────────────────────────────────────────────────────────
 app.get('/health', (req, res) => {
-  res.json({ success: true, service: 'AutoTrust API', version: '1.0.0', uptime: process.uptime() });
+  res.json({ success: true, service: 'CARWISE API', version: '1.0.0', uptime: process.uptime() });
 });
 
 // ── 404 Handler ───────────────────────────────────────────────────────────────
@@ -67,7 +67,7 @@ app.use(errorHandler);
 // ── Start Server ──────────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {
-  console.log(`🚀 AutoTrust API running on http://localhost:${PORT}`);
+  console.log(`🚀 CARWISE API running on http://localhost:${PORT}`);
   console.log(`   Environment: ${process.env.NODE_ENV || 'development'}`);
 });
 

@@ -1,4 +1,4 @@
-// ── Shared TypeScript Types for AutoTrust AI ──────────────────────
+// ── Shared TypeScript Types for CARWISE ──────────────────────
 
 export type FuelType = 'petrol' | 'diesel' | 'electric' | 'hybrid' | 'cng';
 export type Transmission = 'manual' | 'automatic' | 'amt';
