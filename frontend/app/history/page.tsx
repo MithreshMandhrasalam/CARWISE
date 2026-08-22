@@ -108,6 +108,7 @@ export default function HistoryPage() {
     <AppShell
       title="Inspection History"
       subtitle="Review all previously submitted vehicle audits and MongoDB persistence records."
+      requireAuth={true}
     >
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-6)', flexWrap: 'wrap', gap: 12 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>

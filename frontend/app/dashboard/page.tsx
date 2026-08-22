@@ -107,6 +107,7 @@ export default function DashboardPage() {
     <AppShell
       title="Inspection Dashboard"
       subtitle="Track, manage, and review your used-vehicle assessment reports."
+      requireAuth={true}
       action={
         <Link href="/inspect" className="btn btn-primary">
           <Plus size={16} /> New Inspection

@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { optionalAuth } = require('../middleware/auth');
+const { auth } = require('../middleware/auth');
 const {
   validateInspectionCreation,
   validateInspectionUpdate,
@@ -13,10 +13,10 @@ const {
   deleteInspection,
 } = require('../controllers/inspection.controller');
 
-// Optional authentication attaches user if token is valid, otherwise permits guest operation
-router.use(optionalAuth);
+// All inspection routes strictly require valid JWT authentication
+router.use(auth);
 
-// Core CRUD Endpoints
+// Core CRUD Endpoints (strictly scoped to authenticated user)
 router.get('/', listInspections);
 router.post('/', validateInspectionCreation, createInspection);
 router.get('/:id', getInspection);

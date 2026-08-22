@@ -3,14 +3,14 @@ const Inspection = require('../models/Inspection');
 
 /**
  * POST /api/v1/inspections
- * Creates a new inspection with validated vehicle info. Initial status: PENDING.
+ * Creates a new inspection strictly bound to the authenticated user. Initial status: PENDING.
  */
 const createInspection = async (req, res, next) => {
   try {
     const vehicleData = req.validatedData;
 
     const inspection = await Inspection.create({
-      userId: req.user ? req.user._id : null,
+      userId: req.user._id,
       status: 'PENDING',
       vehicleInfo: vehicleData,
       images: [],
@@ -19,7 +19,7 @@ const createInspection = async (req, res, next) => {
     res.status(201).json({
       success: true,
       data: inspection,
-      message: 'Inspection record successfully created in pending state.',
+      message: 'Inspection record successfully created and bound to user account.',
     });
   } catch (err) {
     next(err);
@@ -28,7 +28,7 @@ const createInspection = async (req, res, next) => {
 
 /**
  * GET /api/v1/inspections/:id
- * Retrieves an inspection by its unique MongoDB ObjectId.
+ * Retrieves an inspection by ID, enforcing strict ownership (403 Forbidden for non-owners).
  */
 const getInspection = async (req, res, next) => {
   try {
@@ -44,14 +44,7 @@ const getInspection = async (req, res, next) => {
       });
     }
 
-    const query = { _id: id, isDeleted: false };
-    // If user is authenticated, allow viewing their own or public records
-    if (req.user) {
-      // Authenticated users can view records they own or unclaimed records
-      query.$or = [{ userId: req.user._id }, { userId: null }];
-    }
-
-    const inspection = await Inspection.findOne(query).select('-__v');
+    const inspection = await Inspection.findOne({ _id: id, isDeleted: false }).select('-__v');
 
     if (!inspection) {
       return res.status(404).json({
@@ -59,6 +52,17 @@ const getInspection = async (req, res, next) => {
         error: {
           code: 'NOT_FOUND',
           message: 'Inspection record not found or has been deleted.',
+        },
+      });
+    }
+
+    // Strict Authorization: Verify inspection ownership
+    if (!inspection.userId || inspection.userId.toString() !== req.user._id.toString()) {
+      return res.status(403).json({
+        success: false,
+        error: {
+          code: 'FORBIDDEN',
+          message: 'You do not have permission to access this vehicle inspection.',
         },
       });
     }
@@ -74,7 +78,7 @@ const getInspection = async (req, res, next) => {
 
 /**
  * GET /api/v1/inspections
- * Lists inspections with pagination, sorting, and optional status/make filters.
+ * Lists only the authenticated user's active inspections with pagination and filters.
  */
 const listInspections = async (req, res, next) => {
   try {
@@ -82,12 +86,11 @@ const listInspections = async (req, res, next) => {
     const limit = Math.min(50, Math.max(1, parseInt(req.query.limit, 10) || 10));
     const skip = (page - 1) * limit;
 
-    const filter = { isDeleted: false };
-
-    // Scope to user if authenticated
-    if (req.user) {
-      filter.userId = req.user._id;
-    }
+    // Strict Scope: Only inspections owned by the authenticated user
+    const filter = {
+      userId: req.user._id,
+      isDeleted: false,
+    };
 
     // Optional status filter
     if (req.query.status) {
@@ -134,7 +137,7 @@ const listInspections = async (req, res, next) => {
 
 /**
  * PATCH /api/v1/inspections/:id
- * Safely updates vehicle information fields only.
+ * Safely updates vehicle information fields only for the verified owner.
  */
 const updateInspection = async (req, res, next) => {
   try {
@@ -150,19 +153,25 @@ const updateInspection = async (req, res, next) => {
       });
     }
 
-    const query = { _id: id, isDeleted: false };
-    if (req.user) {
-      query.userId = req.user._id;
-    }
-
-    const inspection = await Inspection.findOne(query);
+    const inspection = await Inspection.findOne({ _id: id, isDeleted: false });
 
     if (!inspection) {
       return res.status(404).json({
         success: false,
         error: {
           code: 'NOT_FOUND',
-          message: 'Inspection record not found or update unauthorized.',
+          message: 'Inspection record not found or has been deleted.',
+        },
+      });
+    }
+
+    // Strict Authorization: Verify ownership before update
+    if (!inspection.userId || inspection.userId.toString() !== req.user._id.toString()) {
+      return res.status(403).json({
+        success: false,
+        error: {
+          code: 'FORBIDDEN',
+          message: 'You do not have permission to modify this inspection.',
         },
       });
     }
@@ -194,7 +203,7 @@ const updateInspection = async (req, res, next) => {
 
 /**
  * DELETE /api/v1/inspections/:id
- * Performs safe soft deletion of an inspection record.
+ * Performs safe soft deletion of an inspection record for the verified owner.
  */
 const deleteInspection = async (req, res, next) => {
   try {
@@ -210,12 +219,7 @@ const deleteInspection = async (req, res, next) => {
       });
     }
 
-    const query = { _id: id, isDeleted: false };
-    if (req.user) {
-      query.userId = req.user._id;
-    }
-
-    const inspection = await Inspection.findOne(query);
+    const inspection = await Inspection.findOne({ _id: id, isDeleted: false });
 
     if (!inspection) {
       return res.status(404).json({
@@ -223,6 +227,17 @@ const deleteInspection = async (req, res, next) => {
         error: {
           code: 'NOT_FOUND',
           message: 'Inspection record not found or already deleted.',
+        },
+      });
+    }
+
+    // Strict Authorization: Verify ownership before deletion
+    if (!inspection.userId || inspection.userId.toString() !== req.user._id.toString()) {
+      return res.status(403).json({
+        success: false,
+        error: {
+          code: 'FORBIDDEN',
+          message: 'You do not have permission to delete this inspection.',
         },
       });
     }

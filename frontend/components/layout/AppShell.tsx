@@ -1,7 +1,10 @@
 'use client';
-import React, { ReactNode } from 'react';
+import React, { ReactNode, useEffect } from 'react';
+import { useRouter, usePathname } from 'next/navigation';
 import Navbar from './Navbar';
 import Footer from './Footer';
+import { useAuth } from '@/contexts/AuthContext';
+import { LoadingCard } from '@/components/ui/LoadingState';
 
 export interface AppShellProps {
   children: ReactNode;
@@ -10,6 +13,7 @@ export interface AppShellProps {
   action?: ReactNode;
   containerSize?: 'sm' | 'md' | 'lg' | 'xl';
   showBanner?: boolean;
+  requireAuth?: boolean;
 }
 
 export function AppShell({
@@ -19,8 +23,42 @@ export function AppShell({
   action,
   containerSize = 'lg',
   showBanner = true,
+  requireAuth = false,
 }: AppShellProps) {
   const containerClass = `container-${containerSize}`;
+  const { isAuthenticated, isLoading } = useAuth();
+  const router = useRouter();
+  const pathname = usePathname();
+
+  useEffect(() => {
+    if (requireAuth && !isLoading && !isAuthenticated) {
+      router.push(`/auth/login?redirect=${encodeURIComponent(pathname)}`);
+    }
+  }, [requireAuth, isLoading, isAuthenticated, router, pathname]);
+
+  if (requireAuth && isLoading) {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+        <Navbar />
+        <main style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 'var(--space-12)' }}>
+          <LoadingCard title="Verifying your secure session..." />
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  if (requireAuth && !isAuthenticated) {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+        <Navbar />
+        <main style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 'var(--space-12)' }}>
+          <LoadingCard title="Redirecting to secure login..." />
+        </main>
+        <Footer />
+      </div>
+    );
+  }
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
@@ -40,7 +78,7 @@ export function AppShell({
           }}
         >
           <span>
-            🔬 <strong>CARWISE Preview:</strong> Phase 2 Frontend Design System & Visual Architecture (Mock Inference Mode)
+            🔒 <strong>CARWISE Protected Workspace:</strong> User Authentication & Inspection Ownership Active
           </span>
         </div>
       )}

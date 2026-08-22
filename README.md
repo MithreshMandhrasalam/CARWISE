@@ -14,6 +14,7 @@
 Help used-car buyers make safer and more informed purchasing decisions by analyzing available vehicle evidence, identifying visible abnormalities, estimating condition and price-related risk, and generating prioritized inspection recommendations.
 
 Key capabilities include:
+- **User Authentication & Inspection Ownership** — strict user-bound inspection lifecycle with JWT sessions and 403 Forbidden cross-user access prevention
 - **Deterministic & ML Image Quality Assessment (IQA)** — filter out blurry, improperly exposed, and duplicate images before processing
 - **Pluggable Computer Vision Damage Detection** — identify cosmetic flaws (dents, scratches, rust, cracks, misalignments) via swappable model adapters
 - **Cross-View Vehicle-Zone Reasoning** — map multi-angle visual abnormalities to logical vehicle zones (e.g. `ZONE_FRONT_RIGHT`) without claiming 3D reconstruction
@@ -31,11 +32,11 @@ Key capabilities include:
 
 ```
 Next.js Frontend (Port 3000)
-        ↓
+        ↓  (JWT Bearer Auth)
 Node.js / Express API Gateway (Port 4000)
         ↓                     ↓
     MongoDB (27017)       Python FastAPI AI Service (Port 8000)
-                                ↓
+    (carwise_db)                ↓
                       ┌────────────────────────────────────────┐
                       │ 1. Deterministic & ML IQA              │
                       │ 2. Pluggable BaseDamageDetector        │
@@ -51,6 +52,22 @@ Detailed technical specifications and design artifacts are located in [`docs/REF
 
 ---
 
+## Authentication & Authorization Architecture (Phase 4)
+
+### 1. Token & Session Strategy
+- **Mechanism:** Stateless JSON Web Tokens (JWT) signed with HMAC SHA-256 (`JWT_SECRET`).
+- **Header:** Sent as `Authorization: Bearer <token>` on all protected API requests.
+- **Client Storage:** Managed by React `AuthContext` and stored in `localStorage` (`carwise_token`, `carwise_user`).
+- **Token Lifecycle:** 7-day standard expiration (`JWT_EXPIRES_IN=7d`), automatically validated on initial load against `GET /api/v1/auth/me`.
+
+### 2. Strict Inspection Ownership Model
+- **User-Bound Creation:** Every vehicle inspection created via `POST /api/v1/inspections` is automatically assigned to `req.user._id`.
+- **Scoped Lists:** `GET /api/v1/inspections` strictly filters documents to `{ userId: req.user._id, isDeleted: false }`.
+- **403 Forbidden Enforcement:** Accessing, updating, or deleting an inspection that belongs to another user returns `403 Forbidden` (`code: 'FORBIDDEN'`).
+- **Route Protection:** Frontend routes (`/dashboard`, `/inspect`, `/history`, `/inspect/[id]`) automatically verify active session and redirect unauthenticated visitors to `/auth/login?redirect=...`.
+
+---
+
 ## Quick Start (Local Development)
 
 ### Prerequisites
@@ -62,9 +79,8 @@ Detailed technical specifications and design artifacts are located in [`docs/REF
 ```bash
 cd backend
 npm install
-# Ensure MongoDB is running on localhost:27017
-npm run dev
-# API available at http://localhost:4000
+npm test            # Run automated 18-case test suite
+npm run dev         # Starts API gateway on http://localhost:4000
 ```
 
 ### 2. AI Service (Python/FastAPI)
@@ -76,24 +92,13 @@ pip install fastapi uvicorn pydantic pydantic-settings python-multipart
 
 # Mock / Dev mode:
 AI_SERVICE_USE_MOCK=true uvicorn app.main:app --reload --port 8000
-
-# Full install with ML libraries:
-pip install -r requirements.txt
-uvicorn app.main:app --reload --port 8000
-# API docs at http://localhost:8000/docs
 ```
 
 ### 3. Frontend (Next.js)
 ```bash
 cd frontend
 npm install
-npm run dev
-# App at http://localhost:3000
-```
-
-### Docker (All Services)
-```bash
-docker-compose up --build
+npm run dev         # Starts Next.js app on http://localhost:3000
 ```
 
 ---
@@ -103,17 +108,12 @@ docker-compose up --build
 ### `backend/.env`
 | Variable | Description | Default |
 |---|---|---|
-| `MONGO_URI` | MongoDB connection string | `mongodb://localhost:27017/carwise_db` |
+| `MONGODB_URI` | MongoDB connection string | `mongodb://localhost:27017/carwise_db` |
 | `JWT_SECRET` | JWT signing secret | *(change in production)* |
+| `JWT_EXPIRES_IN` | Token expiration duration | `7d` |
 | `AI_SERVICE_URL` | Python AI service URL | `http://localhost:8000` |
 | `UPLOAD_DIR` | Image upload directory | `./uploads` |
-
-### `ai-service/.env`
-| Variable | Description | Default |
-|---|---|---|
-| `AI_SERVICE_USE_MOCK` | Use mock AI adapters (dev mode) | `true` |
-| `DAMAGE_MODEL_WEIGHTS` | Path to damage detection weights | `app/ml/weights/damage_weights.pt` |
-| `PRICE_MODEL_WEIGHTS` | Path to verified price model | `app/ml/weights/price_model.json` |
+| `CORS_ORIGIN` | Allowed client origin | `http://localhost:3000` |
 
 ---
 
@@ -131,11 +131,16 @@ docker-compose up --build
 ## Project Structure
 ```
 CARWISE/
-├── frontend/               # Next.js 14 (App Router, TypeScript)
+├── frontend/               # Next.js (App Router, TypeScript, AuthContext)
 ├── backend/                # Node.js / Express API Gateway & Auth
+│   ├── src/
+│   │   ├── config/         # MongoDB connection
+│   │   ├── controllers/    # auth.controller, inspection.controller
+│   │   ├── middleware/     # auth, validate, errorHandler
+│   │   ├── models/         # User, Inspection
+│   │   └── routes/         # auth.routes, inspection.routes
+│   └── tests/              # Automated integration test suite
 ├── ai-service/             # Python FastAPI Microservice & ML Pipelines
 ├── docs/                   # System Architecture & Technical Specifications
-│   └── REFINED_ARCHITECTURE.md
-├── docker-compose.yml
 └── README.md
 ```

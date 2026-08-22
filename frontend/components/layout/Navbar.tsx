@@ -2,11 +2,13 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
-import { Shield, Plus, LayoutDashboard, History, Menu, X, Sparkles } from 'lucide-react';
+import { Shield, Plus, LayoutDashboard, History, Menu, X, Sparkles, User, LogOut, LogIn } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function Navbar() {
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { user, isAuthenticated, logout } = useAuth();
 
   const navLinks = [
     { href: '/dashboard', label: 'Dashboard', icon: <LayoutDashboard size={16} /> },
@@ -78,14 +80,64 @@ export default function Navbar() {
           })}
         </nav>
 
-        {/* Desktop Right Action */}
+        {/* Desktop Right Action: Auth / New Inspection */}
         <div style={{ display: 'none', alignItems: 'center', gap: 12 }} className="desktop-cta">
-          <span className="demo-banner">
-            <Sparkles size={12} /> Phase 2 Prototype
-          </span>
-          <Link href="/inspect" className="btn btn-primary btn-sm">
-            <Plus size={15} /> Start Inspection
-          </Link>
+          {isAuthenticated && user ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  padding: '4px 12px',
+                  borderRadius: 'var(--radius-full)',
+                  background: 'var(--color-surface-elevated)',
+                  border: '1px solid var(--color-border)',
+                  fontSize: '0.8125rem',
+                }}
+              >
+                <div
+                  style={{
+                    width: 22,
+                    height: 22,
+                    borderRadius: '50%',
+                    background: 'var(--color-primary)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '0.6875rem',
+                    fontWeight: 700,
+                    color: '#FFF',
+                  }}
+                >
+                  {user.name.charAt(0).toUpperCase()}
+                </div>
+                <span style={{ color: 'var(--color-text-primary)', fontWeight: 600 }}>{user.name}</span>
+              </div>
+
+              <Link href="/inspect" className="btn btn-primary btn-sm">
+                <Plus size={15} /> Start Inspection
+              </Link>
+
+              <button
+                onClick={logout}
+                className="btn btn-ghost btn-sm"
+                title="Sign out"
+                style={{ padding: '6px 10px', color: 'var(--color-text-muted)' }}
+              >
+                <LogOut size={16} />
+              </button>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Link href="/auth/login" className="btn btn-ghost btn-sm">
+                <LogIn size={15} /> Sign In
+              </Link>
+              <Link href="/auth/register" className="btn btn-primary btn-sm">
+                Register Free
+              </Link>
+            </div>
+          )}
         </div>
 
         {/* Mobile Hamburger Button */}
@@ -130,14 +182,48 @@ export default function Navbar() {
               <span>{link.label}</span>
             </Link>
           ))}
-          <div style={{ marginTop: 'var(--space-2)', paddingTop: 'var(--space-3)', borderTop: '1px solid var(--color-border-subtle)' }}>
-            <Link
-              href="/inspect"
-              onClick={() => setMobileMenuOpen(false)}
-              className="btn btn-primary btn-full"
-            >
-              <Plus size={16} /> Start New Inspection
-            </Link>
+
+          <div style={{ marginTop: 'var(--space-2)', paddingTop: 'var(--space-3)', borderTop: '1px solid var(--color-border-subtle)', display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {isAuthenticated && user ? (
+              <>
+                <div style={{ padding: '8px 12px', fontSize: '0.8125rem', color: 'var(--color-text-muted)' }}>
+                  Signed in as <strong>{user.email}</strong>
+                </div>
+                <Link
+                  href="/inspect"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="btn btn-primary btn-full"
+                >
+                  <Plus size={16} /> Start New Inspection
+                </Link>
+                <button
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    logout();
+                  }}
+                  className="btn btn-secondary btn-full"
+                >
+                  <LogOut size={16} /> Sign Out
+                </button>
+              </>
+            ) : (
+              <>
+                <Link
+                  href="/auth/login"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="btn btn-secondary btn-full"
+                >
+                  <LogIn size={16} /> Sign In
+                </Link>
+                <Link
+                  href="/auth/register"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="btn btn-primary btn-full"
+                >
+                  Register Free Account
+                </Link>
+              </>
+            )}
           </div>
         </div>
       )}

@@ -5,6 +5,7 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger';
   size?: 'sm' | 'md' | 'lg';
   isLoading?: boolean;
+  loading?: boolean;
   leftIcon?: React.ReactNode;
   rightIcon?: React.ReactNode;
   fullWidth?: boolean;
@@ -17,6 +18,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       variant = 'primary',
       size = 'md',
       isLoading = false,
+      loading = false,
       leftIcon,
       rightIcon,
       fullWidth = false,
@@ -27,6 +29,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     },
     ref
   ) => {
+    const isSpinning = isLoading || loading;
     const variantClass = `btn-${variant}`;
     const sizeClass = size !== 'md' ? `btn-${size}` : '';
     const fullClass = fullWidth ? 'btn-full' : '';
@@ -34,18 +37,15 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     return (
       <button
         ref={ref}
-        disabled={disabled || isLoading}
+        disabled={disabled || isSpinning}
         className={`btn ${variantClass} ${sizeClass} ${fullClass} ${className}`.trim()}
         style={style}
         {...props}
       >
-        {isLoading ? (
-          <Loader2 size={size === 'sm' ? 14 : size === 'lg' ? 20 : 16} className="animate-spin" />
-        ) : (
-          leftIcon
-        )}
+        {isSpinning && <Loader2 size={16} className="animate-spin" style={{ marginRight: 6 }} />}
+        {!isSpinning && leftIcon && <span style={{ marginRight: 6, display: 'inline-flex' }}>{leftIcon}</span>}
         <span>{children}</span>
-        {!isLoading && rightIcon}
+        {!isSpinning && rightIcon && <span style={{ marginLeft: 6, display: 'inline-flex' }}>{rightIcon}</span>}
       </button>
     );
   }

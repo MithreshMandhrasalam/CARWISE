@@ -150,6 +150,7 @@ export default function InspectWizardPage() {
       title="Used Vehicle Inspection Wizard"
       subtitle="Follow the 5-step guided process to evaluate vehicle condition and evidence certainty."
       containerSize="lg"
+      requireAuth={true}
     >
       {/* ── Wizard Stepper Header ────────────────────────────────────── */}
       <Card style={{ marginBottom: 'var(--space-8)', padding: 'var(--space-6)' }}>
