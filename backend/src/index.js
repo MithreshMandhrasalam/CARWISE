@@ -50,10 +50,7 @@ if (process.env.NODE_ENV !== 'test') {
   app.use(morgan('dev'));
 }
 
-// ── Static File Serving (uploaded images) ────────────────────────────────────
-app.use('/uploads', express.static(path.resolve(process.env.UPLOAD_DIR || './uploads')));
-
-// ── Routes ────────────────────────────────────────────────────────────────────
+// ── Authenticated Routes ──────────────────────────────────────────────────────
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/inspections', inspectionRoutes);
 

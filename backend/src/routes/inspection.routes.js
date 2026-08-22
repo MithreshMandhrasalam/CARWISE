@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { auth } = require('../middleware/auth');
+const upload = require('../middleware/upload');
 const {
   validateInspectionCreation,
   validateInspectionUpdate,
@@ -12,6 +13,12 @@ const {
   updateInspection,
   deleteInspection,
 } = require('../controllers/inspection.controller');
+const {
+  uploadImage,
+  getImage,
+  deleteImage,
+  getCompleteness,
+} = require('../controllers/image.controller');
 
 // All inspection routes strictly require valid JWT authentication
 router.use(auth);
@@ -22,5 +29,11 @@ router.post('/', validateInspectionCreation, createInspection);
 router.get('/:id', getInspection);
 router.patch('/:id', validateInspectionUpdate, updateInspection);
 router.delete('/:id', deleteInspection);
+
+// Image Pipeline Endpoints (Phase 5)
+router.post('/:id/images', upload.single('image'), uploadImage);
+router.get('/:id/images/:imageId', getImage);
+router.delete('/:id/images/:imageId', deleteImage);
+router.get('/:id/completeness', getCompleteness);
 
 module.exports = router;

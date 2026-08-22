@@ -52,6 +52,10 @@ export const authApi = {
     const res = await apiClient.get('/auth/me');
     return res.data;
   },
+  logout: async (): Promise<ApiResponse> => {
+    const res = await apiClient.post('/auth/logout');
+    return res.data;
+  },
 };
 
 // ── Inspection Endpoints ──────────────────────────────────────────────────────
@@ -96,6 +100,32 @@ export const inspectionApi = {
   delete: async (id: string): Promise<ApiResponse> => {
     const res = await apiClient.delete(`/inspections/${id}`);
     return res.data;
+  },
+
+  // ── Phase 5 Image Ingestion Endpoints ─────────────────────────────────────────
+  uploadImage: async (inspectionId: string, file: File, viewType: string): Promise<ApiResponse> => {
+    const formData = new FormData();
+    formData.append('image', file);
+    formData.append('viewType', viewType);
+
+    const res = await apiClient.post(`/inspections/${inspectionId}/images`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return res.data;
+  },
+
+  deleteImage: async (inspectionId: string, imageId: string): Promise<ApiResponse> => {
+    const res = await apiClient.delete(`/inspections/${inspectionId}/images/${imageId}`);
+    return res.data;
+  },
+
+  getCompleteness: async (inspectionId: string): Promise<ApiResponse> => {
+    const res = await apiClient.get(`/inspections/${inspectionId}/completeness`);
+    return res.data;
+  },
+
+  getImageUrl: (inspectionId: string, imageId: string): string => {
+    return `${API_URL}/inspections/${inspectionId}/images/${imageId}`;
   },
 };
 
