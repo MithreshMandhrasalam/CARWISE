@@ -127,6 +127,39 @@ export const inspectionApi = {
   getImageUrl: (inspectionId: string, imageId: string): string => {
     return `${API_URL}/inspections/${inspectionId}/images/${imageId}`;
   },
+
+  // ── Phase 6 Image Quality Assessment (IQA) Endpoints ─────────────────────────
+  runIQA: async (inspectionId: string): Promise<ApiResponse> => {
+    const res = await apiClient.post(`/inspections/${inspectionId}/iqa`);
+    return res.data;
+  },
+
+  getIQA: async (inspectionId: string): Promise<ApiResponse> => {
+    const res = await apiClient.get(`/inspections/${inspectionId}/iqa`);
+    return res.data;
+  },
+
+  // ── Phase 7C Computer Vision Damage Detection Endpoints ───────────────────────
+  runDamageDetection: async (inspectionId: string): Promise<ApiResponse> => {
+    const res = await apiClient.post(`/inspections/${inspectionId}/damage/detect`);
+    return res.data;
+  },
+
+  getDamageDetections: async (inspectionId: string): Promise<ApiResponse> => {
+    const res = await apiClient.get(`/inspections/${inspectionId}/damage`);
+    return res.data;
+  },
+
+  // ── Phase 8 Evidence Reasoning & Condition Score Endpoints ───────────────────
+  analyzeEvidence: async (inspectionId: string): Promise<ApiResponse> => {
+    const res = await apiClient.post(`/inspections/${inspectionId}/evidence/analyze`);
+    return res.data;
+  },
+
+  getEvidence: async (inspectionId: string): Promise<ApiResponse> => {
+    const res = await apiClient.get(`/inspections/${inspectionId}/evidence`);
+    return res.data;
+  },
 };
 
 export default apiClient;

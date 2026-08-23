@@ -1,7 +1,7 @@
 'use client';
 import { use, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Database, Sparkles, Clock, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, Database, Sparkles, AlertTriangle, CheckCircle2, RefreshCw } from 'lucide-react';
 import { AppShell } from '@/components/layout/AppShell';
 import { ReportViewer } from '@/components/inspection/ReportViewer';
 import { DEMO_INSPECTIONS } from '@/lib/mockData';
@@ -10,6 +10,9 @@ import { LoadingCard } from '@/components/ui/LoadingState';
 import { Card, CardHeader, CardBody } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Alert } from '@/components/ui/Alert';
+import { Button } from '@/components/ui/Button';
+import { DamageOverlayViewer } from '@/components/ui/DamageOverlayViewer';
+import { EvidenceSummaryCard } from '@/components/inspection/EvidenceSummaryCard';
 import { inspectionApi } from '@/lib/api';
 import { CARWISEInspectionReport } from '@/lib/types';
 
@@ -18,72 +21,97 @@ export default function InspectionReportPage({ params }: { params: Promise<{ id:
   const id = resolvedParams.id;
 
   const [loading, setLoading] = useState(true);
+  const [analyzingDamage, setAnalyzingDamage] = useState(false);
+  const [analyzingEvidence, setAnalyzingEvidence] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [report, setReport] = useState<CARWISEInspectionReport | null>(null);
   const [dbInspection, setDbInspection] = useState<any | null>(null);
 
-  useEffect(() => {
-    async function loadRecord() {
-      // 1. Check if this is a known demonstration ID
-      const demoMatch = DEMO_INSPECTIONS.find((d) => d.id === id);
-      if (demoMatch) {
-        setReport(demoMatch);
-        setLoading(false);
-        return;
-      }
-
-      // 2. Otherwise fetch from real MongoDB backend
-      try {
-        const res = await inspectionApi.get(id);
-        if (res.data) {
-          const doc = res.data;
-          setDbInspection(doc);
-
-          // If the DB doc already contains compiled analytical containers
-          if (doc.conditionScore && doc.trustScore) {
-            setReport({
-              id: doc._id,
-              isDemonstrationData: false,
-              vehicleInfo: doc.vehicleInfo,
-              inspectionDate: doc.createdAt,
-              status: doc.status,
-              conditionScore: doc.conditionScore,
-              evidenceConfidence: doc.evidenceConfidence || {
-                visualCoverageIndex: 0.5,
-                mandatoryAnglesSubmitted: doc.images?.length || 0,
-                optionalAnglesSubmitted: 0,
-                uninspectedBlindspots: [],
-                dataCompletenessRatio: 0.8,
-              },
-              trustScore: doc.trustScore,
-              detections: doc.detections || [],
-              crossViewObservations: doc.crossViewObservations || [],
-              priceValuation: doc.priceValuation || {
-                status: 'PENDING_DATASET_VALIDATION',
-                valuationNote: 'Pricing model pending verified Indian used car dataset.',
-              },
-              prioritizedChecklist: doc.prioritizedChecklist || [],
-              finalRecommendation: doc.finalRecommendation || {
-                verdict: 'PROCEED_WITH_CAUTION',
-                summaryHeading: 'Inspection Record Pending Live CV & AI Processing',
-                summaryText: 'This record was successfully persisted in MongoDB. Analytical evaluation will run in upcoming phases.',
-              },
-            });
-          }
-        } else {
-          setError('Inspection not found in database.');
-        }
-      } catch (err: any) {
-        console.warn('DB fetch notice, falling back to demo:', err.message);
-        // Fallback to demo 1 for seamless preview
-        setReport(DEMO_INSPECTIONS[0]);
-      } finally {
-        setLoading(false);
-      }
+  async function loadRecord() {
+    // 1. Check if this is a known demonstration ID
+    const demoMatch = DEMO_INSPECTIONS.find((d) => d.id === id);
+    if (demoMatch) {
+      setReport(demoMatch);
+      setLoading(false);
+      return;
     }
 
+    // 2. Otherwise fetch from real MongoDB backend
+    try {
+      const res = await inspectionApi.get(id);
+      if (res.data) {
+        const doc = res.data;
+        setDbInspection(doc);
+
+        // If the DB doc already contains compiled analytical containers
+        if (doc.conditionScore && doc.trustScore && doc.evidenceAssessment) {
+          setReport({
+            id: doc._id,
+            isDemonstrationData: false,
+            vehicleInfo: doc.vehicleInfo,
+            inspectionDate: doc.createdAt,
+            status: doc.status,
+            conditionScore: doc.conditionScore,
+            evidenceConfidence: doc.evidenceConfidence || {
+              visualCoverageIndex: 0.5,
+              mandatoryAnglesSubmitted: doc.images?.length || 0,
+              optionalAnglesSubmitted: 0,
+              uninspectedBlindspots: [],
+              dataCompletenessRatio: 0.8,
+            },
+            trustScore: doc.trustScore,
+            detections: doc.detections || [],
+            crossViewObservations: doc.crossViewObservations || [],
+            priceValuation: doc.priceValuation || {
+              status: 'PENDING_DATASET_VALIDATION',
+              valuationNote: 'Pricing model pending verified Indian used car dataset.',
+            },
+            prioritizedChecklist: doc.prioritizedChecklist || [],
+            finalRecommendation: doc.finalRecommendation || {
+              verdict: 'PROCEED_WITH_CAUTION',
+              summaryHeading: 'Inspection Record Active',
+              summaryText: 'This record was evaluated with YOLO11s (CarDD Baseline v1) and Phase 8 Evidence Reasoning.',
+            },
+          });
+        }
+      } else {
+        setError('Inspection not found in database.');
+      }
+    } catch (err: any) {
+      console.warn('DB fetch notice, falling back to demo:', err.message);
+      setReport(DEMO_INSPECTIONS[0]);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
     loadRecord();
   }, [id]);
+
+  const handleRunDamageDetection = async () => {
+    try {
+      setAnalyzingDamage(true);
+      await inspectionApi.runDamageDetection(id);
+      await loadRecord();
+    } catch (err: any) {
+      console.error('Failed to run damage detection:', err);
+    } finally {
+      setAnalyzingDamage(false);
+    }
+  };
+
+  const handleRunEvidenceReasoning = async () => {
+    try {
+      setAnalyzingEvidence(true);
+      await inspectionApi.analyzeEvidence(id);
+      await loadRecord();
+    } catch (err: any) {
+      console.error('Failed to run evidence reasoning:', err);
+    } finally {
+      setAnalyzingEvidence(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -106,29 +134,65 @@ export default function InspectionReportPage({ params }: { params: Promise<{ id:
     );
   }
 
-  // If inspection exists in DB but AI evaluation is pending (Phase 3 state)
+  // If inspection exists in DB with images / damage detections
   if (dbInspection && !report) {
     const v = dbInspection.vehicleInfo;
+    const images = dbInspection.images || [];
+    const damageDetections = dbInspection.damageDetections || [];
+    const evidenceAssessment = dbInspection.evidenceAssessment;
+
     return (
       <AppShell
         title={`Vehicle Record: ${v.year} ${v.make} ${v.model}`}
         subtitle={`MongoDB Persisted Inspection (${dbInspection._id})`}
         action={
-          <Link href="/dashboard" className="btn btn-ghost btn-sm">
-            <ArrowLeft size={14} /> Back to Dashboard
-          </Link>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              loading={analyzingEvidence}
+              leftIcon={<Sparkles size={14} />}
+              onClick={handleRunEvidenceReasoning}
+            >
+              {evidenceAssessment ? 'Re-evaluate Evidence Reasoning' : 'Run Phase 8 Evidence Reasoning'}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              loading={analyzingDamage}
+              leftIcon={<Sparkles size={14} />}
+              onClick={handleRunDamageDetection}
+            >
+              {damageDetections.length > 0 ? 'Re-run CV Detection' : 'Run YOLO11s Damage Detection'}
+            </Button>
+            <Link href="/dashboard" className="btn btn-ghost btn-sm">
+              <ArrowLeft size={14} /> Back to Dashboard
+            </Link>
+          </div>
         }
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
-          <Alert variant="info">
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <Database size={16} />
-              <span>
-                <strong>MongoDB Record Active:</strong> This inspection is securely stored in <code>carwise_db</code> with status <strong>{dbInspection.status}</strong>. AI analysis, CV damage detection, and pricing will be connected in subsequent phases.
-              </span>
-            </div>
-          </Alert>
+          {/* Phase 8 Evidence Summary Card if evaluated */}
+          {evidenceAssessment && (
+            <EvidenceSummaryCard evidence={evidenceAssessment} />
+          )}
 
+          {/* Phase 7C Status Alert */}
+          {!evidenceAssessment && (
+            <Alert variant="info">
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <Sparkles size={16} />
+                  <span>
+                    <strong>Phase 7C & 8 Active:</strong> Run Evidence Reasoning to compute the deterministic Vehicle Condition Score V1 and zone aggregations.
+                  </span>
+                </div>
+                <Badge variant="primary">YOLO11s Active</Badge>
+              </div>
+            </Alert>
+          )}
+
+          {/* Vehicle Specifications Overview */}
           <Card elevated>
             <CardHeader>
               <div>
@@ -160,14 +224,42 @@ export default function InspectionReportPage({ params }: { params: Promise<{ id:
                 </div>
               </div>
 
-              <div style={{ padding: 'var(--space-4)', background: 'var(--color-surface-elevated)', borderRadius: 'var(--radius-md)', border: '1px dashed var(--color-border)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--color-accent-light)', fontWeight: 600, fontSize: '0.875rem', marginBottom: 4 }}>
-                  <Clock size={16} /> Phase 3 Architecture Milestone
+              {/* Perspected Images & Bounding Box Overlay Grid */}
+              {images.length > 0 && (
+                <div style={{ marginTop: 'var(--space-6)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-4)' }}>
+                    <div>
+                      <h3 className="heading-sm">Perspective Images & Localized Damage Detections</h3>
+                      <p className="text-secondary" style={{ fontSize: '0.8125rem' }}>
+                        Visualizing localized cosmetic flaws with responsive bounding boxes and confidence categorization.
+                      </p>
+                    </div>
+                    <Badge variant="default">{images.length} Perspectives</Badge>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {images.map((img: any) => {
+                      const detRecord = damageDetections.find((d: any) => d.imageId === img.imageId || d.viewType === img.viewType);
+                      const imageUrl = inspectionApi.getImageUrl(dbInspection._id, img.imageId);
+
+                      return (
+                        <DamageOverlayViewer
+                          key={img.imageId || img.viewType}
+                          imageUrl={imageUrl}
+                          viewType={img.viewType}
+                          status={detRecord?.status || img.qualityStatus === 'FAIL' ? 'BLOCKED_BY_IQA' : 'COMPLETE'}
+                          detections={detRecord?.detections || []}
+                          modelMetadata={detRecord?.modelMetadata}
+                          iqaMeta={{
+                            qualityStatus: img.qualityStatus,
+                            qualityWarning: img.qualityStatus === 'WARN',
+                          }}
+                        />
+                      );
+                    })}
+                  </div>
                 </div>
-                <p style={{ fontSize: '0.8125rem', color: 'var(--color-text-secondary)', lineHeight: 1.5 }}>
-                  Vehicle specifications successfully validated and saved to <code>carwise_db.inspections</code>. Phase 4 & 5 will enable authenticated media uploads, and Phase 6+ will attach automated CV damage detection and cross-view vehicle-zone reasoning.
-                </p>
-              </div>
+              )}
             </CardBody>
           </Card>
         </div>

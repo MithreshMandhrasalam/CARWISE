@@ -1,0 +1,8 @@
+class_index,class_name,precision,recall,mAP50,mAP50_95
+0,scratch,0.718,0.642,0.684,0.395
+1,dent,0.754,0.721,0.748,0.512
+2,crack,0.701,0.638,0.672,0.421
+3,glass_shatter,0.842,0.795,0.836,0.624
+4,lamp_broken,0.768,0.710,0.751,0.498
+5,tire_flat,0.815,0.762,0.798,0.559
+ALL,all_classes,0.742,0.686,0.724,0.468

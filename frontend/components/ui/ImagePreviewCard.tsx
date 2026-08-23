@@ -1,7 +1,7 @@
 'use client';
 import React, { useRef, useState } from 'react';
-import { Upload, X, RefreshCw, CheckCircle2, AlertTriangle, Eye } from 'lucide-react';
-import { ImageAngle, IQAResult } from '@/lib/types';
+import { Upload, X, RefreshCw, CheckCircle2, AlertTriangle, XCircle, Sparkles } from 'lucide-react';
+import { ImageAngle } from '@/lib/types';
 import { Badge } from './Badge';
 
 export interface ImagePreviewCardProps {
@@ -11,7 +11,10 @@ export interface ImagePreviewCardProps {
   isMandatory: boolean;
   file?: File;
   previewUrl?: string;
-  iqaResult?: IQAResult;
+  qualityStatus?: 'PASS' | 'WARN' | 'FAIL' | 'PENDING';
+  qualityScore?: number | null;
+  warnings?: string[];
+  isUploading?: boolean;
   onFileSelect: (angle: ImageAngle, file: File) => void;
   onFileRemove: (angle: ImageAngle) => void;
 }
@@ -23,7 +26,10 @@ export function ImagePreviewCard({
   isMandatory,
   file,
   previewUrl,
-  iqaResult,
+  qualityStatus,
+  qualityScore,
+  warnings = [],
+  isUploading = false,
   onFileSelect,
   onFileRemove,
 }: ImagePreviewCardProps) {
@@ -75,9 +81,20 @@ export function ImagePreviewCard({
             {description}
           </p>
         </div>
-        <Badge variant={isMandatory ? 'primary' : 'default'} style={{ fontSize: '0.6875rem' }}>
-          {isMandatory ? 'Mandatory' : 'Optional'}
-        </Badge>
+        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+          {qualityStatus && qualityStatus !== 'PENDING' && (
+            <Badge
+              variant={qualityStatus === 'PASS' ? 'success' : qualityStatus === 'WARN' ? 'warning' : 'danger'}
+              style={{ fontSize: '0.6875rem' }}
+            >
+              {qualityStatus === 'PASS' ? 'IQA PASS' : qualityStatus === 'WARN' ? 'IQA WARN' : 'IQA FAIL'}
+              {qualityScore !== null && qualityScore !== undefined ? ` • ${qualityScore}/100` : ''}
+            </Badge>
+          )}
+          <Badge variant={isMandatory ? 'primary' : 'default'} style={{ fontSize: '0.6875rem' }}>
+            {isMandatory ? 'Mandatory' : 'Optional'}
+          </Badge>
+        </div>
       </div>
 
       {/* Hidden File Input */}
@@ -132,8 +149,8 @@ export function ImagePreviewCard({
             </button>
           </div>
 
-          {/* IQA Quality Badge Preview (Simulation/Feedback) */}
-          {iqaResult && (
+          {/* IQA Quality Diagnostic Overlay */}
+          {qualityStatus && qualityStatus !== 'PENDING' && (
             <div
               style={{
                 position: 'absolute',
@@ -142,17 +159,54 @@ export function ImagePreviewCard({
                 zIndex: 10,
                 display: 'flex',
                 alignItems: 'center',
-                gap: 4,
-                padding: '2px 8px',
-                borderRadius: 'var(--radius-xs)',
+                gap: 5,
+                padding: '4px 10px',
+                borderRadius: 'var(--radius-sm)',
                 fontSize: '0.6875rem',
                 fontWeight: 600,
-                background: iqaResult.status === 'PASS' ? 'rgba(16, 185, 129, 0.9)' : 'rgba(245, 158, 11, 0.9)',
+                backdropFilter: 'blur(8px)',
+                background:
+                  qualityStatus === 'PASS'
+                    ? 'rgba(16, 185, 129, 0.90)'
+                    : qualityStatus === 'WARN'
+                    ? 'rgba(245, 158, 11, 0.90)'
+                    : 'rgba(239, 68, 68, 0.90)',
                 color: '#FFFFFF',
               }}
             >
-              {iqaResult.status === 'PASS' ? <CheckCircle2 size={12} /> : <AlertTriangle size={12} />}
-              <span>{iqaResult.status === 'PASS' ? 'Quality Verified' : 'Exposure/Blur Warning'}</span>
+              {qualityStatus === 'PASS' ? (
+                <CheckCircle2 size={13} />
+              ) : qualityStatus === 'WARN' ? (
+                <AlertTriangle size={13} />
+              ) : (
+                <XCircle size={13} />
+              )}
+              <span>
+                {qualityStatus === 'PASS'
+                  ? 'Sharp & Clear'
+                  : qualityStatus === 'WARN'
+                  ? 'Minor Quality Warning'
+                  : 'Quality Inadequate'}
+              </span>
+            </div>
+          )}
+
+          {isUploading && (
+            <div
+              style={{
+                position: 'absolute',
+                inset: 0,
+                background: 'rgba(7, 9, 14, 0.75)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 8,
+                color: '#FFF',
+                fontSize: '0.8125rem',
+                fontWeight: 600,
+              }}
+            >
+              <RefreshCw size={16} className="animate-spin" /> Ingesting & Validating...
             </div>
           )}
         </div>
@@ -207,9 +261,21 @@ export function ImagePreviewCard({
               Click or drag to upload
             </span>
             <p style={{ fontSize: '0.6875rem', color: 'var(--color-text-muted)', marginTop: 2 }}>
-              JPG, PNG, or WEBP (Max 15MB)
+              JPG, PNG, or WebP (Up to 20MB)
             </p>
           </div>
+        </div>
+      )}
+
+      {/* Warnings List */}
+      {warnings && warnings.length > 0 && (
+        <div style={{ fontSize: '0.6875rem', color: qualityStatus === 'FAIL' ? 'var(--color-danger)' : 'var(--color-warning)', lineHeight: 1.3 }}>
+          {warnings.map((w, idx) => (
+            <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <span>•</span>
+              <span>{w}</span>
+            </div>
+          ))}
         </div>
       )}
     </div>

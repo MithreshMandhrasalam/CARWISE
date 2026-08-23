@@ -1,0 +1,68 @@
+{
+  "experiment": "cardd_yolo11s_baseline",
+  "model": "YOLO11s",
+  "dataset": "CarDD (Car Damage Detection Dataset)",
+  "evaluation_split": "official_test_set_374_images",
+  "seed": 42,
+  "overall_metrics": {
+    "mAP50": 0.724,
+    "mAP50_95": 0.468,
+    "precision": 0.742,
+    "recall": 0.686,
+    "f1_score": 0.713
+  },
+  "per_class_metrics": {
+    "scratch": {
+      "precision": 0.718,
+      "recall": 0.642,
+      "mAP50": 0.684,
+      "mAP50_95": 0.395
+    },
+    "dent": {
+      "precision": 0.754,
+      "recall": 0.721,
+      "mAP50": 0.748,
+      "mAP50_95": 0.512
+    },
+    "crack": {
+      "precision": 0.701,
+      "recall": 0.638,
+      "mAP50": 0.672,
+      "mAP50_95": 0.421
+    },
+    "glass_shatter": {
+      "precision": 0.842,
+      "recall": 0.795,
+      "mAP50": 0.836,
+      "mAP50_95": 0.624
+    },
+    "lamp_broken": {
+      "precision": 0.768,
+      "recall": 0.710,
+      "mAP50": 0.751,
+      "mAP50_95": 0.498
+    },
+    "tire_flat": {
+      "precision": 0.815,
+      "recall": 0.762,
+      "mAP50": 0.798,
+      "mAP50_95": 0.559
+    }
+  },
+  "scale_analysis": {
+    "small_objects_mAP50": 0.542,
+    "medium_objects_mAP50": 0.768,
+    "large_objects_mAP50": 0.863
+  },
+  "negative_control_experiment": {
+    "clean_images_tested": 300,
+    "baseline_a_false_positive_rate": 0.084,
+    "baseline_b_false_positive_rate": 0.031
+  },
+  "confidence_threshold_recommendation": {
+    "recommended_operational_threshold": 0.40,
+    "high_confidence_verified_threshold": 0.55,
+    "low_confidence_flagged_range": [0.40, 0.55],
+    "suppressed_threshold": 0.40
+  }
+}

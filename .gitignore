@@ -10,6 +10,8 @@ build/
 *.env
 uploads/
 test_uploads/
+test_uploads_*/
+backend/test_uploads_*/
 
 # Python
 __pycache__/
@@ -21,11 +23,17 @@ venv/
 *.egg-info/
 .pytest_cache/
 
-# AI model weights (too large for git — use git-lfs or download separately)
+# AI model weights & datasets (too large for git — use git-lfs or download separately)
 ai-service/app/ml/weights/*.pt
 ai-service/app/ml/weights/*.onnx
 ai-service/app/ml/weights/*.json
 ai-service/app/ml/weights/*.pkl
+ai-service/ml/experiments/**/weights/
+ai-service/ml/dataset/data/
+runs/
+*.pt
+*.pth
+*.onnx
 
 # MongoDB
 *.mongo

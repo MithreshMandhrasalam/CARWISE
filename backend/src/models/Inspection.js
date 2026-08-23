@@ -189,6 +189,42 @@ const inspectionSchema = new mongoose.Schema(
     },
 
     detections: [damageDetectionItemSchema],
+    damageDetections: [
+      {
+        imageId: String,
+        viewType: String,
+        status: {
+          type: String,
+          enum: ['COMPLETE', 'BLOCKED_BY_IQA', 'NO_DAMAGE_DETECTED', 'MODEL_ERROR'],
+          default: 'COMPLETE',
+        },
+        detections: [
+          {
+            className: String,
+            classId: Number,
+            confidence: Number,
+            confidenceBand: { type: String, enum: ['HIGH_CONFIDENCE', 'POTENTIAL'] },
+            bbox: {
+              xMin: Number,
+              yMin: Number,
+              xMax: Number,
+              yMax: Number,
+            },
+            qualityWarning: { type: Boolean, default: false },
+          },
+        ],
+        iqa: mongoose.Schema.Types.Mixed,
+        modelMetadata: {
+          name: { type: String, default: 'YOLO11s' },
+          provider: { type: String, default: 'Ultralytics' },
+          version: { type: String, default: '1.0.0' },
+          weightsVersion: { type: String, default: 'cardd-baseline-v1' },
+          dataset: { type: String, default: 'CarDD' },
+          inferenceTimeMs: { type: Number, default: 0 },
+        },
+        analyzedAt: { type: Date, default: Date.now },
+      },
+    ],
     crossViewObservations: [crossViewObservationSchema],
 
     priceValuation: {
@@ -207,6 +243,91 @@ const inspectionSchema = new mongoose.Schema(
     },
 
     prioritizedChecklist: [checklistItemSchema],
+
+    evidenceAssessment: {
+      version: { type: String, default: 'EVIDENCE_V1' },
+      totalEvidenceCount: { type: Number, default: 0 },
+      uniqueFindingCount: { type: Number, default: 0 },
+      findings: [
+        {
+          evidenceId: String,
+          imageId: String,
+          viewType: String,
+          zone: String,
+          damageClass: String,
+          modelConfidence: Number,
+          confidenceBand: String,
+          bbox: {
+            xMin: Number,
+            yMin: Number,
+            xMax: Number,
+            yMax: Number,
+          },
+          bboxAreaRatio: Number,
+          severity: String,
+          severityBasis: [String],
+          mappingConfidence: String,
+          mappingBasis: String,
+          requiresPhysicalVerification: { type: Boolean, default: true },
+          isDuplicateEvidence: { type: Boolean, default: false },
+          duplicateOf: String,
+          qualityWarning: { type: Boolean, default: false },
+        },
+      ],
+      zones: [
+        {
+          zone: String,
+          findingCount: Number,
+          highestSeverity: String,
+          evidencePriority: Number,
+          findings: [mongoose.Schema.Types.Mixed],
+        },
+      ],
+      crossViewObservations: [
+        {
+          observationId: String,
+          type: String,
+          severity: String,
+          zones: [String],
+          evidenceIds: [String],
+          statement: String,
+          requiresPhysicalVerification: { type: Boolean, default: true },
+        },
+      ],
+      conditionScore: {
+        score: { type: Number, min: 0, max: 100 },
+        formulaVersion: { type: String, default: 'CONDITION_V1' },
+        baseScore: { type: Number, default: 100 },
+        deductions: [
+          {
+            reason: String,
+            zone: String,
+            severity: String,
+            points: Number,
+          },
+        ],
+        explanation: String,
+        limitations: [String],
+      },
+      evidenceCompleteness: {
+        coverageScore: Number,
+        mandatoryViewsComplete: Boolean,
+        usableImageCount: Number,
+        submittedViews: [String],
+        blindspots: [String],
+        warnings: [String],
+      },
+      trustScore: {
+        trustScore: { type: Number, default: null },
+        status: { type: String, default: 'PENDING_TRUST_MODEL' },
+        reason: {
+          type: String,
+          default: 'Trust scoring requires evidence completeness, model confidence, and price validation.',
+        },
+      },
+      limitations: [String],
+      analyzedAt: { type: Date, default: Date.now },
+    },
 
     finalRecommendation: {
       verdict: {
