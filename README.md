@@ -54,6 +54,8 @@ Detailed technical specifications and design artifacts are located in:
 - [`docs/CV_DATASET_AUDIT.md`](file:///Users/mithresh/Desktop/autotrust-ai/docs/CV_DATASET_AUDIT.md)
 - [`docs/CV_BASELINE_EXPERIMENT.md`](file:///Users/mithresh/Desktop/autotrust-ai/docs/CV_BASELINE_EXPERIMENT.md)
 - [`docs/CV_INFERENCE_ARCHITECTURE.md`](file:///Users/mithresh/Desktop/autotrust-ai/docs/CV_INFERENCE_ARCHITECTURE.md)
+- [`docs/EVIDENCE_REASONING_V1.md`](file:///Users/mithresh/Desktop/autotrust-ai/docs/EVIDENCE_REASONING_V1.md)
+- [`docs/TRUST_SCORE_V1.md`](file:///Users/mithresh/Desktop/autotrust-ai/docs/TRUST_SCORE_V1.md)
 
 ---
 

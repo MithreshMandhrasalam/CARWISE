@@ -13,6 +13,8 @@ import { Alert } from '@/components/ui/Alert';
 import { Button } from '@/components/ui/Button';
 import { DamageOverlayViewer } from '@/components/ui/DamageOverlayViewer';
 import { EvidenceSummaryCard } from '@/components/inspection/EvidenceSummaryCard';
+import { EvidenceCoverageCard } from '@/components/inspection/EvidenceCoverageCard';
+import { TrustScoreBreakdown } from '@/components/inspection/TrustScoreBreakdown';
 import { inspectionApi } from '@/lib/api';
 import { CARWISEInspectionReport } from '@/lib/types';
 
@@ -23,6 +25,7 @@ export default function InspectionReportPage({ params }: { params: Promise<{ id:
   const [loading, setLoading] = useState(true);
   const [analyzingDamage, setAnalyzingDamage] = useState(false);
   const [analyzingEvidence, setAnalyzingEvidence] = useState(false);
+  const [analyzingTrust, setAnalyzingTrust] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [report, setReport] = useState<CARWISEInspectionReport | null>(null);
   const [dbInspection, setDbInspection] = useState<any | null>(null);
@@ -70,7 +73,7 @@ export default function InspectionReportPage({ params }: { params: Promise<{ id:
             finalRecommendation: doc.finalRecommendation || {
               verdict: 'PROCEED_WITH_CAUTION',
               summaryHeading: 'Inspection Record Active',
-              summaryText: 'This record was evaluated with YOLO11s (CarDD Baseline v1) and Phase 8 Evidence Reasoning.',
+              summaryText: 'This record was evaluated with YOLO11s, Evidence Reasoning, and Phase 9 Trust Scoring.',
             },
           });
         }
@@ -113,6 +116,18 @@ export default function InspectionReportPage({ params }: { params: Promise<{ id:
     }
   };
 
+  const handleRunTrustAnalysis = async () => {
+    try {
+      setAnalyzingTrust(true);
+      await inspectionApi.analyzeTrust(id);
+      await loadRecord();
+    } catch (err: any) {
+      console.error('Failed to run trust analysis:', err);
+    } finally {
+      setAnalyzingTrust(false);
+    }
+  };
+
   if (loading) {
     return (
       <AppShell title="Loading Vehicle Record">
@@ -140,6 +155,8 @@ export default function InspectionReportPage({ params }: { params: Promise<{ id:
     const images = dbInspection.images || [];
     const damageDetections = dbInspection.damageDetections || [];
     const evidenceAssessment = dbInspection.evidenceAssessment;
+    const trustScoreData = evidenceAssessment?.trustScore;
+    const completenessData = evidenceAssessment?.evidenceCompleteness;
 
     return (
       <AppShell
@@ -150,11 +167,22 @@ export default function InspectionReportPage({ params }: { params: Promise<{ id:
             <Button
               variant="outline"
               size="sm"
+              loading={analyzingTrust}
+              leftIcon={<Sparkles size={14} />}
+              onClick={handleRunTrustAnalysis}
+            >
+              {trustScoreData?.trustScore !== null && trustScoreData?.trustScore !== undefined
+                ? 'Re-evaluate Trust Score'
+                : 'Run Phase 9 Trust Assessment'}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
               loading={analyzingEvidence}
               leftIcon={<Sparkles size={14} />}
               onClick={handleRunEvidenceReasoning}
             >
-              {evidenceAssessment ? 'Re-evaluate Evidence Reasoning' : 'Run Phase 8 Evidence Reasoning'}
+              {evidenceAssessment ? 'Re-evaluate Evidence' : 'Run Evidence Reasoning'}
             </Button>
             <Button
               variant="outline"
@@ -163,7 +191,7 @@ export default function InspectionReportPage({ params }: { params: Promise<{ id:
               leftIcon={<Sparkles size={14} />}
               onClick={handleRunDamageDetection}
             >
-              {damageDetections.length > 0 ? 'Re-run CV Detection' : 'Run YOLO11s Damage Detection'}
+              {damageDetections.length > 0 ? 'Re-run CV' : 'Run CV Detection'}
             </Button>
             <Link href="/dashboard" className="btn btn-ghost btn-sm">
               <ArrowLeft size={14} /> Back to Dashboard
@@ -172,7 +200,17 @@ export default function InspectionReportPage({ params }: { params: Promise<{ id:
         }
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
-          {/* Phase 8 Evidence Summary Card if evaluated */}
+          {/* Phase 9 Buyer Assessment Trust Card */}
+          {trustScoreData && (
+            <TrustScoreBreakdown trustData={trustScoreData} />
+          )}
+
+          {/* Phase 9 Evidence Coverage Card */}
+          {completenessData && (
+            <EvidenceCoverageCard completeness={completenessData} />
+          )}
+
+          {/* Phase 8 Evidence Summary Card */}
           {evidenceAssessment && (
             <EvidenceSummaryCard evidence={evidenceAssessment} />
           )}

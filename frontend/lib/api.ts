@@ -160,6 +160,17 @@ export const inspectionApi = {
     const res = await apiClient.get(`/inspections/${inspectionId}/evidence`);
     return res.data;
   },
+
+  // ── Phase 9 Buyer Assessment Trust & Completeness Endpoints ──────────────────
+  analyzeTrust: async (inspectionId: string): Promise<ApiResponse> => {
+    const res = await apiClient.post(`/inspections/${inspectionId}/trust/analyze`);
+    return res.data;
+  },
+
+  getTrust: async (inspectionId: string): Promise<ApiResponse> => {
+    const res = await apiClient.get(`/inspections/${inspectionId}/trust`);
+    return res.data;
+  },
 };
 
 export default apiClient;

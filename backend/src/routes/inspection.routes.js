@@ -31,6 +31,10 @@ const {
   analyzeInspectionEvidence,
   getInspectionEvidence,
 } = require('../controllers/evidence.controller');
+const {
+  analyzeInspectionTrust,
+  getInspectionTrust,
+} = require('../controllers/trust.controller');
 
 // All inspection routes strictly require valid JWT authentication
 router.use(auth);
@@ -59,5 +63,9 @@ router.get('/:id/damage', getDamageDetections);
 // Evidence Reasoning & Deterministic Damage Assessment (Phase 8)
 router.post('/:id/evidence/analyze', analyzeInspectionEvidence);
 router.get('/:id/evidence', getInspectionEvidence);
+
+// Buyer Assessment Trust & Completeness (Phase 9)
+router.post('/:id/trust/analyze', analyzeInspectionTrust);
+router.get('/:id/trust', getInspectionTrust);
 
 module.exports = router;
