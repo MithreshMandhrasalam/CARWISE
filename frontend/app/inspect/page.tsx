@@ -237,19 +237,28 @@ export default function InspectWizardPage() {
     { number: 5, title: 'Evaluation' },
   ];
 
-  const handleStartAnalysis = () => {
+  const handleStartAnalysis = async () => {
     setIsAnalyzing(true);
     setCurrentStep(5);
 
     const targetId = activeInspectionId || 'demo-insp-2026-001';
 
+    // Fire live full assessment if activeInspectionId is in MongoDB
+    if (activeInspectionId && activeInspectionId !== 'demo-insp-2026-001') {
+      try {
+        await inspectionApi.runFullAssessment(activeInspectionId, 'TIER_2');
+      } catch (err) {
+        console.warn('Full assessment run notice during wizard:', err);
+      }
+    }
+
     // Visual progression simulation
-    setTimeout(() => setAnalysisStep(1), 600);
-    setTimeout(() => setAnalysisStep(2), 1200);
-    setTimeout(() => setAnalysisStep(3), 1800);
+    setTimeout(() => setAnalysisStep(1), 500);
+    setTimeout(() => setAnalysisStep(2), 1000);
+    setTimeout(() => setAnalysisStep(3), 1500);
     setTimeout(() => {
       router.push(`/inspect/${targetId}`);
-    }, 2400);
+    }, 2000);
   };
 
   return (

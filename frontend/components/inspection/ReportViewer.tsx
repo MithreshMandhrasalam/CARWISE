@@ -140,8 +140,8 @@ export function ReportViewer({ report }: ReportViewerProps) {
             <Eye size={18} color="var(--color-accent-light)" />
             <h3 className="heading-md">Evidence Completeness & Visual Blindspots</h3>
           </div>
-          <Badge variant={evidenceConfidence.visualCoverageIndex >= 0.8 ? 'success' : 'warning'}>
-            {Math.round(evidenceConfidence.visualCoverageIndex * 100)}% Visual Coverage
+          <Badge variant={(evidenceConfidence?.visualCoverageIndex || 0) >= 0.8 ? 'success' : 'warning'}>
+            {Math.round((evidenceConfidence?.visualCoverageIndex || 0) * 100)}% Visual Coverage
           </Badge>
         </CardHeader>
 

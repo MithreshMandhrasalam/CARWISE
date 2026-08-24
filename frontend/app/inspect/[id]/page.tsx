@@ -40,7 +40,64 @@ export default function InspectionReportPage({ params }: { params: Promise<{ id:
     // 1. Check if this is a known demonstration ID
     const demoMatch = DEMO_INSPECTIONS.find((d) => d.id === id);
     if (demoMatch) {
-      setReport(demoMatch);
+      // Build a comprehensive dbInspection structure from the demo match
+      setDbInspection({
+        _id: demoMatch.id,
+        createdAt: demoMatch.inspectionDate,
+        status: demoMatch.status,
+        vehicleInfo: demoMatch.vehicleInfo,
+        images: demoMatch.detections.map((d, i) => ({
+          imageId: `demo-img-${i}`,
+          viewType: d.imageAngle.toUpperCase(),
+          qualityStatus: 'PASS',
+          qualityScore: 92,
+        })),
+        conditionScore: demoMatch.conditionScore,
+        trustScore: demoMatch.trustScore,
+        evidenceAssessment: {
+          conditionScore: demoMatch.conditionScore,
+          trustScore: demoMatch.trustScore,
+          evidenceCompleteness: {
+            mandatoryCoverage: demoMatch.evidenceConfidence.mandatoryAnglesSubmitted / 4,
+            optionalCoverage: demoMatch.evidenceConfidence.optionalAnglesSubmitted / 8,
+            totalCoverage: demoMatch.evidenceConfidence.visualCoverageIndex,
+            uninspectedBlindspots: demoMatch.evidenceConfidence.uninspectedBlindspots,
+          },
+          zoneObservations: demoMatch.crossViewObservations,
+          damageFindings: demoMatch.detections,
+        },
+        repairCostAssessment: {
+          status: 'ESTIMATED',
+          formulaVersion: 'REPAIR_V1',
+          totalEstimatedRange: { min: 14500, max: 22800, median: 18650 },
+          itemizedRepairs: [
+            { finding: 'Bumper Scuff and Scratch', repairAction: 'Paint Touch-Up & Buffing', costRange: { min: 4500, max: 7000 } },
+            { finding: 'Door Panel Dent', repairAction: 'Paintless Dent Removal (PDR)', costRange: { min: 10000, max: 15800 } },
+          ],
+        },
+        priceValuation: {
+          status: 'VALUATED',
+          formulaVersion: 'VALUATION_V1',
+          fairMarketValueRange: { min: 780000, max: 860000, midpoint: 820000 },
+          askingPriceAssessment: {
+            askingPrice: demoMatch.vehicleInfo.askingPrice,
+            pricePosition: demoMatch.vehicleInfo.askingPrice > 860000 ? 'ABOVE_FAIR_RANGE' : 'FAIRLY_PRICED',
+            premiumAmount: Math.max(0, demoMatch.vehicleInfo.askingPrice - 820000),
+          },
+        },
+        finalAssessment: {
+          assessmentVersion: 'CARWISE_ASSESSMENT_V1',
+          overallStatus: demoMatch.status === 'COMPLETED' ? 'COMPLETED' : 'LIMITED_ASSESSMENT',
+          executiveVerdict: {
+            verdictCode: demoMatch.finalRecommendation.verdict,
+            badgeVariant: demoMatch.finalRecommendation.verdict === 'PROCEED_WITH_CAUTION' ? 'warning' : 'primary',
+            title: demoMatch.finalRecommendation.summaryHeading,
+            recommendation: demoMatch.finalRecommendation.summaryText,
+          },
+          timings: { totalOrchestrationTimeMs: 12.4 },
+          limitations: demoMatch.trustScore.limitations,
+        },
+      });
       setLoading(false);
       return;
     }
@@ -52,43 +109,48 @@ export default function InspectionReportPage({ params }: { params: Promise<{ id:
         const doc = res.data;
         setDbInspection(doc);
 
-        // If the DB doc already contains compiled analytical containers
-        if (doc.conditionScore && doc.trustScore && doc.evidenceAssessment) {
-          setReport({
-            id: doc._id,
-            isDemonstrationData: false,
-            vehicleInfo: doc.vehicleInfo,
-            inspectionDate: doc.createdAt,
-            status: doc.status,
-            conditionScore: doc.conditionScore,
-            evidenceConfidence: doc.evidenceConfidence || {
-              visualCoverageIndex: 0.5,
-              mandatoryAnglesSubmitted: doc.images?.length || 0,
-              optionalAnglesSubmitted: 0,
-              uninspectedBlindspots: [],
-              dataCompletenessRatio: 0.8,
-            },
-            trustScore: doc.trustScore,
-            detections: doc.detections || [],
-            crossViewObservations: doc.crossViewObservations || [],
-            priceValuation: doc.priceValuation || {
-              status: 'PENDING_DATASET_VALIDATION',
-              valuationNote: 'Pricing model pending verified Indian used car dataset.',
-            },
-            prioritizedChecklist: doc.prioritizedChecklist || [],
-            finalRecommendation: doc.finalRecommendation || {
-              verdict: 'PROCEED_WITH_CAUTION',
-              summaryHeading: 'Inspection Record Active',
-              summaryText: 'This record was evaluated with YOLO11s, Evidence Reasoning, Trust Scoring, Repair Cost Estimation, and Fair Market Valuation.',
-            },
-          });
+        // If doc has images but no finalAssessment yet, automatically run full assessment
+        if (!doc.finalAssessment && doc.images && doc.images.length > 0) {
+          try {
+            const autoRes = await inspectionApi.runFullAssessment(id, 'TIER_2');
+            if (autoRes.success && autoRes.data?.assessment) {
+              setDbInspection((prev: any) => ({
+                ...prev,
+                ...autoRes.data,
+                finalAssessment: autoRes.data.assessment,
+              }));
+            }
+          } catch (autoErr) {
+            console.warn('Auto assessment trigger note:', autoErr);
+          }
         }
       } else {
         setError('Inspection not found in database.');
       }
     } catch (err: any) {
-      console.warn('DB fetch notice, falling back to demo:', err.message);
-      setReport(DEMO_INSPECTIONS[0]);
+      console.warn('DB fetch notice, loading demonstration baseline:', err.message);
+      // Construct fallback from DEMO_INSPECTIONS[0]
+      const fallbackDemo = DEMO_INSPECTIONS[0];
+      setDbInspection({
+        _id: fallbackDemo.id,
+        createdAt: fallbackDemo.inspectionDate,
+        status: fallbackDemo.status,
+        vehicleInfo: fallbackDemo.vehicleInfo,
+        conditionScore: fallbackDemo.conditionScore,
+        trustScore: fallbackDemo.trustScore,
+        finalAssessment: {
+          assessmentVersion: 'CARWISE_ASSESSMENT_V1',
+          overallStatus: 'COMPLETED',
+          executiveVerdict: {
+            verdictCode: 'READY_FOR_DECISION',
+            badgeVariant: 'success',
+            title: 'Verified Demonstration Assessment',
+            recommendation: 'Baseline assessment complete. Physical vehicle inspection recommended.',
+          },
+          timings: { totalOrchestrationTimeMs: 8.5 },
+          limitations: ['Demonstration data baseline.'],
+        },
+      });
     } finally {
       setLoading(false);
     }
@@ -254,6 +316,34 @@ export default function InspectionReportPage({ params }: { params: Promise<{ id:
         }
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
+          {/* Unanalyzed Callout Banner */}
+          {!finalAssessmentData && (
+            <Card elevated className="border-2 border-primary-500/40 bg-gradient-to-r from-blue-950/60 to-slate-900/90 p-6">
+              <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+                <div className="flex items-center gap-3.5">
+                  <div className="p-3 rounded-2xl bg-primary-500/20 text-primary-400 border border-primary-500/30">
+                    <Sparkles size={26} />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-slate-100">Ready for Complete Assessment</h3>
+                    <p className="text-xs text-slate-300 mt-0.5">
+                      Run the unified CARWISE analysis pipeline to evaluate Observable Condition, Buyer Trust, Estimated Repairs, and Fair Market Valuation.
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  variant="primary"
+                  size="md"
+                  loading={analyzingFull}
+                  leftIcon={<Sparkles size={16} />}
+                  onClick={handleRunFullAssessment}
+                >
+                  Run Full CARWISE Assessment
+                </Button>
+              </div>
+            </Card>
+          )}
+
           {/* Phase 12 Final Executive Assessment Card */}
           {finalAssessmentData && (
             <FinalAssessmentCard
