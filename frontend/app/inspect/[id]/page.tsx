@@ -15,6 +15,9 @@ import { DamageOverlayViewer } from '@/components/ui/DamageOverlayViewer';
 import { EvidenceSummaryCard } from '@/components/inspection/EvidenceSummaryCard';
 import { EvidenceCoverageCard } from '@/components/inspection/EvidenceCoverageCard';
 import { TrustScoreBreakdown } from '@/components/inspection/TrustScoreBreakdown';
+import { RepairCostSummaryCard } from '@/components/inspection/RepairCostSummaryCard';
+import { ValuationSummaryCard } from '@/components/inspection/ValuationSummaryCard';
+import { FinalAssessmentCard } from '@/components/inspection/FinalAssessmentCard';
 import { inspectionApi } from '@/lib/api';
 import { CARWISEInspectionReport } from '@/lib/types';
 
@@ -23,9 +26,12 @@ export default function InspectionReportPage({ params }: { params: Promise<{ id:
   const id = resolvedParams.id;
 
   const [loading, setLoading] = useState(true);
+  const [analyzingFull, setAnalyzingFull] = useState(false);
   const [analyzingDamage, setAnalyzingDamage] = useState(false);
   const [analyzingEvidence, setAnalyzingEvidence] = useState(false);
   const [analyzingTrust, setAnalyzingTrust] = useState(false);
+  const [analyzingRepair, setAnalyzingRepair] = useState(false);
+  const [analyzingValuation, setAnalyzingValuation] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [report, setReport] = useState<CARWISEInspectionReport | null>(null);
   const [dbInspection, setDbInspection] = useState<any | null>(null);
@@ -73,7 +79,7 @@ export default function InspectionReportPage({ params }: { params: Promise<{ id:
             finalRecommendation: doc.finalRecommendation || {
               verdict: 'PROCEED_WITH_CAUTION',
               summaryHeading: 'Inspection Record Active',
-              summaryText: 'This record was evaluated with YOLO11s, Evidence Reasoning, and Phase 9 Trust Scoring.',
+              summaryText: 'This record was evaluated with YOLO11s, Evidence Reasoning, Trust Scoring, Repair Cost Estimation, and Fair Market Valuation.',
             },
           });
         }
@@ -91,6 +97,18 @@ export default function InspectionReportPage({ params }: { params: Promise<{ id:
   useEffect(() => {
     loadRecord();
   }, [id]);
+
+  const handleRunFullAssessment = async () => {
+    try {
+      setAnalyzingFull(true);
+      await inspectionApi.runFullAssessment(id, 'TIER_2');
+      await loadRecord();
+    } catch (err: any) {
+      console.error('Failed to run full assessment:', err);
+    } finally {
+      setAnalyzingFull(false);
+    }
+  };
 
   const handleRunDamageDetection = async () => {
     try {
@@ -128,6 +146,30 @@ export default function InspectionReportPage({ params }: { params: Promise<{ id:
     }
   };
 
+  const handleRunRepairCostEstimate = async () => {
+    try {
+      setAnalyzingRepair(true);
+      await inspectionApi.estimateRepairCost(id, 'TIER_2');
+      await loadRecord();
+    } catch (err: any) {
+      console.error('Failed to estimate repair cost:', err);
+    } finally {
+      setAnalyzingRepair(false);
+    }
+  };
+
+  const handleRunValuationEvaluation = async () => {
+    try {
+      setAnalyzingValuation(true);
+      await inspectionApi.evaluateValuation(id);
+      await loadRecord();
+    } catch (err: any) {
+      console.error('Failed to evaluate valuation:', err);
+    } finally {
+      setAnalyzingValuation(false);
+    }
+  };
+
   if (loading) {
     return (
       <AppShell title="Loading Vehicle Record">
@@ -155,8 +197,11 @@ export default function InspectionReportPage({ params }: { params: Promise<{ id:
     const images = dbInspection.images || [];
     const damageDetections = dbInspection.damageDetections || [];
     const evidenceAssessment = dbInspection.evidenceAssessment;
-    const trustScoreData = evidenceAssessment?.trustScore;
+    const trustScoreData = evidenceAssessment?.trustScore || dbInspection.trustScore;
     const completenessData = evidenceAssessment?.evidenceCompleteness;
+    const repairCostData = dbInspection.repairCostAssessment;
+    const valuationData = dbInspection.priceValuation;
+    const finalAssessmentData = dbInspection.finalAssessment;
 
     return (
       <AppShell
@@ -165,6 +210,33 @@ export default function InspectionReportPage({ params }: { params: Promise<{ id:
         action={
           <div className="flex items-center gap-2">
             <Button
+              variant="primary"
+              size="sm"
+              loading={analyzingFull}
+              leftIcon={<Sparkles size={14} />}
+              onClick={handleRunFullAssessment}
+            >
+              {finalAssessmentData ? 'Re-run Full Assessment' : 'Run Full CARWISE Assessment'}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              loading={analyzingValuation}
+              leftIcon={<Sparkles size={14} />}
+              onClick={handleRunValuationEvaluation}
+            >
+              {valuationData?.fairMarketValueRange?.midpoint ? 'Valuation' : 'Evaluate Valuation'}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              loading={analyzingRepair}
+              leftIcon={<Sparkles size={14} />}
+              onClick={handleRunRepairCostEstimate}
+            >
+              {repairCostData ? 'Repair' : 'Estimate Repair'}
+            </Button>
+            <Button
               variant="outline"
               size="sm"
               loading={analyzingTrust}
@@ -172,26 +244,8 @@ export default function InspectionReportPage({ params }: { params: Promise<{ id:
               onClick={handleRunTrustAnalysis}
             >
               {trustScoreData?.trustScore !== null && trustScoreData?.trustScore !== undefined
-                ? 'Re-evaluate Trust Score'
-                : 'Run Phase 9 Trust Assessment'}
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              loading={analyzingEvidence}
-              leftIcon={<Sparkles size={14} />}
-              onClick={handleRunEvidenceReasoning}
-            >
-              {evidenceAssessment ? 'Re-evaluate Evidence' : 'Run Evidence Reasoning'}
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              loading={analyzingDamage}
-              leftIcon={<Sparkles size={14} />}
-              onClick={handleRunDamageDetection}
-            >
-              {damageDetections.length > 0 ? 'Re-run CV' : 'Run CV Detection'}
+                ? 'Trust'
+                : 'Trust Score'}
             </Button>
             <Link href="/dashboard" className="btn btn-ghost btn-sm">
               <ArrowLeft size={14} /> Back to Dashboard
@@ -200,6 +254,29 @@ export default function InspectionReportPage({ params }: { params: Promise<{ id:
         }
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
+          {/* Phase 12 Final Executive Assessment Card */}
+          {finalAssessmentData && (
+            <FinalAssessmentCard
+              assessment={{
+                ...finalAssessmentData,
+                conditionScore: dbInspection.conditionScore,
+                trustScore: trustScoreData,
+                repairCostAssessment: repairCostData,
+                priceValuation: valuationData,
+              }}
+            />
+          )}
+
+          {/* Phase 11 Fair Market Valuation Summary Card */}
+          {valuationData && valuationData.fairMarketValueRange && (
+            <ValuationSummaryCard valuationData={valuationData} />
+          )}
+
+          {/* Phase 10 Repair Cost Summary Card */}
+          {repairCostData && (
+            <RepairCostSummaryCard repairData={repairCostData} />
+          )}
+
           {/* Phase 9 Buyer Assessment Trust Card */}
           {trustScoreData && (
             <TrustScoreBreakdown trustData={trustScoreData} />

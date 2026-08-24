@@ -35,6 +35,18 @@ const {
   analyzeInspectionTrust,
   getInspectionTrust,
 } = require('../controllers/trust.controller');
+const {
+  estimateInspectionRepairCost,
+  getInspectionRepairCost,
+} = require('../controllers/repair.controller');
+const {
+  evaluateInspectionValuation,
+  getInspectionValuation,
+} = require('../controllers/valuation.controller');
+const {
+  analyzeFullInspection,
+  getInspectionAssessment,
+} = require('../controllers/assessment.controller');
 
 // All inspection routes strictly require valid JWT authentication
 router.use(auth);
@@ -67,5 +79,17 @@ router.get('/:id/evidence', getInspectionEvidence);
 // Buyer Assessment Trust & Completeness (Phase 9)
 router.post('/:id/trust/analyze', analyzeInspectionTrust);
 router.get('/:id/trust', getInspectionTrust);
+
+// Repair Cost Estimation (Phase 10)
+router.post('/:id/repair/estimate', estimateInspectionRepairCost);
+router.get('/:id/repair', getInspectionRepairCost);
+
+// Fair Market Valuation & Asking Price Assessment (Phase 11)
+router.post('/:id/valuation/evaluate', evaluateInspectionValuation);
+router.get('/:id/valuation', getInspectionValuation);
+
+// Consolidated End-to-End Buyer Assessment Orchestration (Phase 12)
+router.post('/:id/analyze', analyzeFullInspection);
+router.get('/:id/assessment', getInspectionAssessment);
 
 module.exports = router;

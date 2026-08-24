@@ -56,6 +56,9 @@ Detailed technical specifications and design artifacts are located in:
 - [`docs/CV_INFERENCE_ARCHITECTURE.md`](file:///Users/mithresh/Desktop/autotrust-ai/docs/CV_INFERENCE_ARCHITECTURE.md)
 - [`docs/EVIDENCE_REASONING_V1.md`](file:///Users/mithresh/Desktop/autotrust-ai/docs/EVIDENCE_REASONING_V1.md)
 - [`docs/TRUST_SCORE_V1.md`](file:///Users/mithresh/Desktop/autotrust-ai/docs/TRUST_SCORE_V1.md)
+- [`docs/REPAIR_COST_V1.md`](file:///Users/mithresh/Desktop/autotrust-ai/docs/REPAIR_COST_V1.md)
+- [`docs/VALUATION_V1.md`](file:///Users/mithresh/Desktop/autotrust-ai/docs/VALUATION_V1.md)
+- [`docs/FINAL_SYSTEM_ARCHITECTURE.md`](file:///Users/mithresh/Desktop/autotrust-ai/docs/FINAL_SYSTEM_ARCHITECTURE.md)
 
 ---
 

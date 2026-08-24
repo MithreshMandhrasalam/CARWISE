@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
-from app.routers import damage_detection, price_estimation, condition_score, iqa, evidence_reasoning, trust_score
+from app.routers import damage_detection, price_estimation, condition_score, iqa, evidence_reasoning, trust_score, repair_cost, valuation, assessment
 
 app = FastAPI(
     title="CARWISE AI Service",
@@ -25,6 +25,9 @@ app.include_router(damage_detection.router, prefix="/api/v1/damage", tags=["Dama
 app.include_router(damage_detection.router, prefix="/api/v1/ai/damage", tags=["Damage Detection (Legacy)"])
 app.include_router(evidence_reasoning.router, prefix="/api/v1/evidence", tags=["Evidence Reasoning"])
 app.include_router(trust_score.router, prefix="/api/v1/trust", tags=["Trust Scoring"])
+app.include_router(repair_cost.router, prefix="/api/v1/repair", tags=["Repair Cost Estimation"])
+app.include_router(valuation.router, prefix="/api/v1/valuation", tags=["Fair Market Valuation"])
+app.include_router(assessment.router, prefix="/api/v1/assessment", tags=["Consolidated Assessment Orchestrator"])
 app.include_router(price_estimation.router, prefix="/api/v1/ai/price", tags=["Price Estimation"])
 app.include_router(condition_score.router, prefix="/api/v1/ai/score", tags=["Condition Score"])
 

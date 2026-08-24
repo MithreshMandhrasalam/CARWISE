@@ -171,6 +171,39 @@ export const inspectionApi = {
     const res = await apiClient.get(`/inspections/${inspectionId}/trust`);
     return res.data;
   },
+
+  // ── Phase 10 Repair Cost Estimation Endpoints ───────────────────────────────
+  estimateRepairCost: async (inspectionId: string, regionTier: string = 'TIER_2'): Promise<ApiResponse> => {
+    const res = await apiClient.post(`/inspections/${inspectionId}/repair/estimate`, { regionTier });
+    return res.data;
+  },
+
+  getRepairCost: async (inspectionId: string): Promise<ApiResponse> => {
+    const res = await apiClient.get(`/inspections/${inspectionId}/repair`);
+    return res.data;
+  },
+
+  // ── Phase 11 Fair-Market Vehicle Valuation Endpoints ─────────────────────────
+  evaluateValuation: async (inspectionId: string): Promise<ApiResponse> => {
+    const res = await apiClient.post(`/inspections/${inspectionId}/valuation/evaluate`);
+    return res.data;
+  },
+
+  getValuation: async (inspectionId: string): Promise<ApiResponse> => {
+    const res = await apiClient.get(`/inspections/${inspectionId}/valuation`);
+    return res.data;
+  },
+
+  // ── Phase 12 End-to-End Assessment Orchestrator Endpoints ──────────────────
+  runFullAssessment: async (inspectionId: string, regionTier: string = 'TIER_2'): Promise<ApiResponse> => {
+    const res = await apiClient.post(`/inspections/${inspectionId}/analyze`, { regionTier });
+    return res.data;
+  },
+
+  getAssessment: async (inspectionId: string): Promise<ApiResponse> => {
+    const res = await apiClient.get(`/inspections/${inspectionId}/assessment`);
+    return res.data;
+  },
 };
 
 export default apiClient;
